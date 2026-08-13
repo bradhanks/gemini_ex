@@ -115,7 +115,15 @@ defmodule Gemini.MixProject do
         "guides/function_calling.md",
         "guides/structured_outputs.md",
         "guides/system_instructions.md",
+
+        # Interactions API
         "guides/interactions.md",
+        "guides/interactions_text.md",
+        "guides/interactions_image_generation.md",
+        "guides/interactions_speech.md",
+        "guides/interactions_video.md",
+        "guides/interactions_understanding.md",
+        "guides/interactions_thinking.md",
 
         # Content Generation
         "guides/image_generation.md",
@@ -159,8 +167,16 @@ defmodule Gemini.MixProject do
           "guides/STREAMING.md",
           "guides/function_calling.md",
           "guides/structured_outputs.md",
-          "guides/system_instructions.md",
-          "guides/interactions.md"
+          "guides/system_instructions.md"
+        ],
+        "Interactions API": [
+          "guides/interactions.md",
+          "guides/interactions_text.md",
+          "guides/interactions_image_generation.md",
+          "guides/interactions_speech.md",
+          "guides/interactions_video.md",
+          "guides/interactions_understanding.md",
+          "guides/interactions_thinking.md"
         ],
         "Content Generation": [
           "guides/image_generation.md",

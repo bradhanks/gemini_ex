@@ -180,32 +180,6 @@ Gemini.Streaming.stop_stream(stream_id)
 
 Streaming knobs: pass `timeout:` (per attempt, default `config :gemini_ex, :timeout` = 120_000), `stream_timeout:` (collect timeout, default 60_000; orphaned streams are cleaned up on timeout), `max_retries:` (default 3), `max_backoff_ms:` (default 10_000), and `connect_timeout:` (default 5_000). Manager cleanup delay can be tuned via `config :gemini_ex, :streaming, cleanup_delay_ms: ...`.
 
-### Interactions Quick Start
-
-```elixir
-alias Gemini.APIs.Interactions
-alias Gemini.Types.Interactions.Events.ContentDelta
-alias Gemini.Types.Interactions.DeltaTextDelta
-
-{:ok, stream} =
-  Interactions.create("Write a short poem about Elixir",
-    model: "gemini-2.5-flash",
-    stream: true
-  )
-
-for event <- stream do
-  case event do
-    %ContentDelta{delta: %DeltaTextDelta{text: text}} when is_binary(text) ->
-      IO.write(text)
-
-    _ ->
-      :ok
-  end
-end
-```
-
-See `guides/interactions.md` for CRUD, resumption (`last_event_id`), and background/cancel/delete examples.
-
 ### Live API (WebSocket)
 
 Real-time bidirectional streaming for voice, video, and text interactions. For Gemini Live connections, `v1beta` is the default API version, while `v1alpha` is available for advanced native-audio features. Vertex Live connections use the Vertex `v1` WebSocket endpoint.
@@ -401,6 +375,36 @@ config =
 ```
 
 See [Structured Outputs Guide](guides/structured_outputs.md) for details.
+
+## Interactions API
+
+Google documents the Interactions API as the unified surface for current Gemini
+capabilities, including text, image, speech, video, media understanding, and
+thinking. The capability modules return the useful output directly while still
+letting you request the complete interaction when you need state, steps, or
+usage.
+
+```elixir
+{:ok, text} =
+  Gemini.Interactions.Text.generate("Explain OTP in two sentences",
+    model: "gemini-3.6-flash"
+  )
+
+IO.puts(text)
+```
+
+Start with the guide for the output or input you need:
+
+- [Text](guides/interactions_text.md)
+- [Image generation and editing](guides/interactions_image_generation.md)
+- [Speech](guides/interactions_speech.md)
+- [Gemini Omni video](guides/interactions_video.md)
+- [Image, video, audio, and document understanding](guides/interactions_understanding.md)
+- [Thinking and thought signatures](guides/interactions_thinking.md)
+
+For CRUD, stored conversations, background execution, SSE streaming, and stream
+resumption, see the [Interactions API lifecycle guide](guides/interactions.md).
+The existing `generateContent`-based functions remain supported and unchanged.
 
 ## Context Caching (New in v0.6.0!)
 

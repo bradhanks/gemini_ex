@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-08-12
+
+### Added
+
+- Added the authoritative `Interaction.steps` response field and typed
+  `Gemini.Types.Interactions.Step` model, including dedicated function-call and
+  function-result steps plus a lossless fallback for unmodeled step types.
+- Added `Interaction.output_text/1`, `output_image/1`, `output_audio/1`, and
+  `output_video/1` accessors, along with `thought_signatures/1` for collecting
+  signatures in step order.
+- Added typed `step.start`, `step.delta`, and `step.stop` SSE events and the
+  remaining typed delta variants for streamed arguments, annotations, Google
+  Maps, retrieval, and file search payloads.
+- Added typed Interactions response formats for text, image, audio, video, JSON
+  Schema, and JSON Object output while retaining raw-map and list pass-through.
+- Added Interactions request fields for `safety_settings`, `service_tier`,
+  `environment`, `labels`, `webhook_config`, and `user_metadata`.
+- Added `DocumentContent.resolution`, `GoogleSearch.search_types`, and
+  `GenerationConfig.video_config` with the typed `VideoConfig` model.
+- Added the `Gemini.Interactions.Text`, `Image`, `Speech`, `Video`, and
+  `Understanding` capability modules, including streaming pass-through,
+  stateless thought-signature support, image editing, PCM/WAV speech output,
+  Gemini Omni video, and multimodal understanding helpers.
+- Added registry entries and config aliases for `gemini-3.6-flash`,
+  `gemini-3.5-flash`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`,
+  `gemini-3.1-flash-image`, `gemini-3.1-flash-lite-image`,
+  `gemini-3-pro-image`, `gemini-3.1-flash-tts-preview`,
+  `gemini-3.5-live-translate-preview`, `gemini-omni-flash`, and
+  `gemini-embedding-2-preview`.
+- Added capability guides and runnable examples for Interactions text, image,
+  speech, media understanding, and thinking, plus a Gemini Omni video guide.
+
+### Changed
+
+- Corrected the current SSE lifecycle event names to `interaction.created` and
+  `interaction.completed`; the legacy `interaction.start` and
+  `interaction.complete` spellings remain accepted.
+- **User-visible model alias change:** `:latest` now resolves to
+  `gemini-3.6-flash` instead of `gemini-3.1-pro-preview`.
+
 ## [0.16.0] - 2026-08-10
 
 ### Changed

@@ -38,7 +38,7 @@ A comprehensive Elixir client for Google's Gemini AI API with dual authenticatio
 - **Chat Sessions & System Instructions**: Multi-turn conversation management with persistent guardrails
 - **Flexible Multimodal Input**: Intuitive formats for images/text with automatic MIME detection
 - **Thinking Budget Control**: Optimize costs by controlling thinking token usage
-- **Gemini 3 Support**: `thinking_level` (`:minimal`, `:low`, `:medium`, `:high`), image generation, media resolution, thought signatures (NEW in v0.5.x!)
+- **Gemini 3 Support**: `thinking_level` (`:low`/`:high` on Pro, plus Flash-only `:minimal`/`:medium`), image generation, media resolution, thought signatures (NEW in v0.5.x!)
 - **Context Caching**: Cache large contexts once and reuse by ID (NEW in v0.6.0!)
 - **Complete Generation Config**: Full support for all generation config options including structured output
 - **Production Ready**: Robust error handling, retry logic, and performance optimizations

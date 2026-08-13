@@ -137,8 +137,6 @@ defmodule Gemini.Interactions.Speech do
     end
   end
 
-  defp decode_audio(_data), do: {:error, :invalid_audio_data}
-
   defp build_opts(opts) do
     explicit_generation_config? = Keyword.has_key?(opts, :generation_config)
     {speech_opts, rest} = Keyword.split(opts, @speech_option_keys)

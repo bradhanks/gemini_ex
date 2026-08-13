@@ -447,6 +447,21 @@ defmodule Gemini.Types.Interactions.Events.InteractionSSEEvent do
     StepStop
   }
 
+  @event_type_to_module %{
+    "content.delta" => ContentDelta,
+    "content.start" => ContentStart,
+    "content.stop" => ContentStop,
+    "error" => ErrorEvent,
+    "interaction.complete" => InteractionEvent,
+    "interaction.completed" => InteractionEvent,
+    "interaction.created" => InteractionEvent,
+    "interaction.start" => InteractionEvent,
+    "interaction.status_update" => InteractionStatusUpdate,
+    "step.delta" => StepDelta,
+    "step.start" => StepStart,
+    "step.stop" => StepStop
+  }
+
   @type t ::
           InteractionEvent.t()
           | InteractionStatusUpdate.t()
@@ -478,20 +493,9 @@ defmodule Gemini.Types.Interactions.Events.InteractionSSEEvent do
   def from_api(%ErrorEvent{} = event), do: event
 
   def from_api(%{} = data) do
-    case Map.get(data, "event_type") do
-      "interaction.created" -> InteractionEvent.from_api(data)
-      "interaction.completed" -> InteractionEvent.from_api(data)
-      "interaction.status_update" -> InteractionStatusUpdate.from_api(data)
-      "step.start" -> StepStart.from_api(data)
-      "step.delta" -> StepDelta.from_api(data)
-      "step.stop" -> StepStop.from_api(data)
-      "error" -> ErrorEvent.from_api(data)
-      "interaction.start" -> InteractionEvent.from_api(data)
-      "interaction.complete" -> InteractionEvent.from_api(data)
-      "content.start" -> ContentStart.from_api(data)
-      "content.delta" -> ContentDelta.from_api(data)
-      "content.stop" -> ContentStop.from_api(data)
-      _ -> nil
+    case Map.fetch(@event_type_to_module, Map.get(data, "event_type")) do
+      {:ok, module} -> module.from_api(data)
+      :error -> nil
     end
   end
 end
@@ -501,9 +505,7 @@ defmodule Gemini.Types.Interactions.Events do
   Helpers for decoding Interactions SSE events.
   """
 
-  alias Gemini.Types.Interactions.Events.{
-    InteractionSSEEvent
-  }
+  alias Gemini.Types.Interactions.Events.InteractionSSEEvent
 
   @doc """
   Decodes an Interactions SSE event payload.

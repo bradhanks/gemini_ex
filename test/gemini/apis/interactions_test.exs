@@ -580,8 +580,7 @@ defmodule Gemini.APIs.InteractionsTest do
       text =
         events
         |> Enum.filter(&is_struct(&1, StepDelta))
-        |> Enum.map(& &1.delta.text)
-        |> Enum.join()
+        |> Enum.map_join("", & &1.delta.text)
 
       assert text == "Hello"
       assert Enum.any?(events, &is_struct(&1, StepStart))

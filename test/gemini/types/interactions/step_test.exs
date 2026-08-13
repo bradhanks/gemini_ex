@@ -4,8 +4,8 @@ defmodule Gemini.Types.Interactions.StepTest do
   alias Gemini.Types.Interactions.{
     FunctionCallStep,
     FunctionResultStep,
-    Step,
     StandardStep,
+    Step,
     TextContent,
     UnknownStep
   }

@@ -686,9 +686,11 @@ defmodule Gemini.RateLimiterTest do
     test "non_blocking returns retry_at and does not execute request" do
       model = "non-blocking-#{System.unique_integer()}"
       key = State.build_key(model, nil, :token_count)
+      {clock, now_fn, _sleep_fn} = fake_clock()
 
-      # Set a short window that should produce a future retry_at
-      State.record_usage(key, 15, 0, window_duration_ms: 50)
+      on_exit(fn -> stop_fake_clock(clock) end)
+
+      State.record_usage(key, 15, 0, window_duration_ms: 50, now: now_fn.())
 
       parent = self()
 
@@ -704,6 +706,7 @@ defmodule Gemini.RateLimiterTest do
           estimated_input_tokens: 10,
           token_budget_per_window: 20,
           window_duration_ms: 50,
+          now_fn: now_fn,
           non_blocking: true
         )
 

@@ -81,14 +81,14 @@ defmodule Gemini.Interactions.Text do
   def build_opts(opts) do
     {config_opts, rest} = Keyword.split(opts, @generation_config_keys)
 
-    case {Keyword.get(rest, :generation_config), config_opts} do
-      {nil, []} ->
+    case {Keyword.has_key?(rest, :generation_config), config_opts} do
+      {false, []} ->
         rest
 
-      {nil, _config_opts} ->
+      {false, _config_opts} ->
         Keyword.put(rest, :generation_config, struct(GenerationConfig, config_opts))
 
-      {_existing, _config_opts} ->
+      {true, _config_opts} ->
         rest
     end
   end

@@ -132,6 +132,14 @@ defmodule Gemini.Interactions.TextTest do
     assert sent_body()["generation_config"] == %{"temperature" => 0.7}
   end
 
+  test "build_opts/1 preserves an explicit nil generation_config" do
+    opts = Text.build_opts(model: "gemini-3.6-flash", generation_config: nil, temperature: 0.2)
+
+    assert Keyword.has_key?(opts, :generation_config)
+    assert Keyword.fetch!(opts, :generation_config) == nil
+    refute Keyword.has_key?(opts, :temperature)
+  end
+
   test "generate/2 returns :not_found as an error when there is no text", %{bypass: bypass} do
     respond(bypass, %{"id" => "i", "status" => "completed"})
 

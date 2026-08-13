@@ -15,8 +15,9 @@ the wrong Gemini wire type, does not enforce any of the coupled Veo 3.1
 constraints, and cannot extract the documented completed Gemini response.
 Vertex support is not operationally compatible with the current Google Cloud
 shape: both the generation endpoint and polling method/path are wrong, and the
-shared parameter and response schemas use the Gemini dialect instead of the
-Google Cloud dialect.
+shared parameter and response handling instead mixes hybrid/legacy schemas:
+integer duration resembles Vertex, `numberOfVideos` is Gemini, and the extractor
+matches neither current completion shape.
 
 The highest-risk gaps are response extraction and the Vertex lifecycle. A call
 can be accepted initially yet still be impossible to poll or turn into a
@@ -100,7 +101,7 @@ with the contract.
 | Extra parameter | `negativePrompt` | **Partial** | `lib/gemini/types/generation/video.ex:121` exposes it and `lib/gemini/types/generation/video.ex:224` emits it. It is documented by the current Google Cloud/Vertex guide but is absent from the task shape and current Gemini parameter table, so Gemini support is not established by the cited reference. |
 | Extra parameter | `seed` | **Partial** | `lib/gemini/types/generation/video.ex:122` exposes an unrestricted integer and `lib/gemini/types/generation/video.ex:225` emits it. The Gemini guide confirms the parameter but warns it is not deterministic; the Google Cloud guide additionally constrains it to uint32, which is not validated here. |
 | Other public config | `fps`, `compression_format`, `safety_filter_level`, `guidance_scale` | **Partial** | Fields exist at `lib/gemini/types/generation/video.ex:118-123`, but the only emitted parameters are listed at `lib/gemini/types/generation/video.ex:213-225`. The local field docs call the first three legacy but do not label `guidance_scale` consistently (`lib/gemini/types/generation/video.ex:101-107`). |
-| Backend selection | Per-call Gemini/Vertex auth choice | **Incorrect** | Public generation options list only model/project/location at `lib/gemini/apis/videos.ex:80-84`; routing derives the backend from global `Config.auth_config/0` at `lib/gemini/apis/videos.ex:149-158`, while the original options reach HTTP separately at `lib/gemini/apis/videos.ex:159`. A documented per-call `auth: :vertex_ai` can therefore authenticate one backend while using the other backend's path. |
+| Backend selection | Per-call Gemini/Vertex auth choice | **Incorrect** | Public generation options list only model/project/location at `lib/gemini/apis/videos.ex:80-84`; routing derives the backend from global `Config.auth_config/0` at `lib/gemini/apis/videos.ex:149-158`, while the original options reach HTTP separately at `lib/gemini/apis/videos.ex:159`. HTTP independently interprets `opts[:auth]` and builds credentials at `lib/gemini/client/http.ex:200-214`. A documented per-call `auth: :vertex_ai` can therefore authenticate one backend after `Videos` has built the other backend's path. |
 | Gemini endpoint | POST `models/{model}:predictLongRunning` | **Full** | `lib/gemini/apis/videos.ex:344-346` builds the exact relative Gemini path and `lib/gemini/apis/videos.ex:159` posts to it. |
 | Vertex endpoint | POST publisher model `:predictLongRunning` | **Incorrect** | `lib/gemini/apis/videos.ex:335-341` builds `.../{model}:predict`, contrary to the formal/current Google Cloud long-running endpoint. |
 | Vertex parameters | `sampleCount` and optional `storageUri` | **Missing** | The shared builder emits `numberOfVideos` and has no storage field (`lib/gemini/types/generation/video.ex:91-130`, `lib/gemini/types/generation/video.ex:213-225`). The current Google Cloud guide uses `sampleCount` and `storageUri`. |
@@ -160,9 +161,9 @@ plus credentialed Gemini and Vertex live verification**.
    `predictLongRunning` plus `fetchPredictOperation` POST for Vertex), then parse
    both documented completion shapes.
 2. **P0 — separate the request dialects.** Emit Gemini string
-   `durationSeconds`/`numberOfVideos` and Vertex integer duration/`sampleCount`;
-   remove the duplicate parameter-level prompt and map backend-specific person
-   policies.
+   `durationSeconds` and integer `numberOfVideos`; emit Vertex integer duration
+   and `sampleCount`. Remove the duplicate parameter-level prompt and map
+   backend-specific person policies.
 3. **P1 — validate Veo 3.1 constraints before I/O.** Enforce allowed aspect
    ratios, durations, resolutions, one Gemini output, reference-image count,
    last-frame pairing, extension MIME/resolution, and Lite capability limits.

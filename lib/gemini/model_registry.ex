@@ -45,6 +45,251 @@ defmodule Gemini.ModelRegistry do
 
   @entries [
     %{
+      key: :gemini_3_6_flash,
+      code: "gemini-3.6-flash",
+      source_page: "https://ai.google.dev/gemini-api/docs/models",
+      track: :stable,
+      latest_update: "August 2026",
+      input_modalities: [:text, :image, :video, :audio, :pdf],
+      output_modalities: [:text, :image, :video, :audio],
+      capabilities: %{
+        audio_generation: :supported,
+        batch_api: :supported,
+        caching: :supported,
+        function_calling: :supported,
+        image_generation: :supported,
+        live_api: :not_supported,
+        structured_outputs: :supported,
+        thinking: :supported
+      },
+      aliases: [],
+      live_modalities: [],
+      notes: nil
+    },
+    %{
+      key: :gemini_3_5_flash,
+      code: "gemini-3.5-flash",
+      source_page: "https://ai.google.dev/gemini-api/docs/models",
+      track: :stable,
+      latest_update: "August 2026",
+      input_modalities: [:text, :image, :video, :audio],
+      output_modalities: [:text, :image, :video, :audio],
+      capabilities: %{
+        audio_generation: :supported,
+        batch_api: :unknown,
+        caching: :unknown,
+        function_calling: :unknown,
+        image_generation: :supported,
+        live_api: :unknown,
+        structured_outputs: :unknown,
+        thinking: :unknown
+      },
+      aliases: [],
+      live_modalities: [],
+      notes: nil
+    },
+    %{
+      key: :gemini_3_5_flash_lite,
+      code: "gemini-3.5-flash-lite",
+      source_page: "https://ai.google.dev/gemini-api/docs/models",
+      track: :stable,
+      latest_update: "August 2026",
+      input_modalities: [:text, :image, :video, :audio],
+      output_modalities: [:text, :image, :video, :audio],
+      capabilities: %{
+        audio_generation: :supported,
+        batch_api: :unknown,
+        caching: :unknown,
+        function_calling: :unknown,
+        image_generation: :supported,
+        live_api: :unknown,
+        structured_outputs: :unknown,
+        thinking: :unknown
+      },
+      aliases: [],
+      live_modalities: [],
+      notes: nil
+    },
+    %{
+      key: :gemini_3_1_flash_lite,
+      code: "gemini-3.1-flash-lite",
+      source_page: "https://ai.google.dev/gemini-api/docs/models",
+      track: :stable,
+      latest_update: "August 2026",
+      input_modalities: [:text, :image, :video, :audio],
+      output_modalities: [:text, :image, :video, :audio],
+      capabilities: %{
+        audio_generation: :supported,
+        batch_api: :unknown,
+        caching: :unknown,
+        function_calling: :unknown,
+        image_generation: :supported,
+        live_api: :unknown,
+        structured_outputs: :unknown,
+        thinking: :unknown
+      },
+      aliases: [],
+      live_modalities: [],
+      notes: nil
+    },
+    %{
+      key: :gemini_3_1_flash_image,
+      code: "gemini-3.1-flash-image",
+      source_page: "https://ai.google.dev/gemini-api/docs/models",
+      track: :stable,
+      latest_update: "August 2026",
+      input_modalities: [:text, :image],
+      output_modalities: [:image],
+      capabilities: %{
+        audio_generation: :not_supported,
+        batch_api: :unknown,
+        caching: :unknown,
+        function_calling: :unknown,
+        image_generation: :supported,
+        live_api: :unknown,
+        structured_outputs: :unknown,
+        thinking: :supported
+      },
+      aliases: [],
+      live_modalities: [],
+      notes: nil
+    },
+    %{
+      key: :gemini_3_1_flash_lite_image,
+      code: "gemini-3.1-flash-lite-image",
+      source_page: "https://ai.google.dev/gemini-api/docs/models",
+      track: :stable,
+      latest_update: "August 2026",
+      input_modalities: [:text, :image],
+      output_modalities: [:image],
+      capabilities: %{
+        audio_generation: :not_supported,
+        batch_api: :unknown,
+        caching: :unknown,
+        function_calling: :unknown,
+        image_generation: :supported,
+        live_api: :unknown,
+        structured_outputs: :unknown,
+        thinking: :not_supported
+      },
+      aliases: [],
+      live_modalities: [],
+      notes: nil
+    },
+    %{
+      key: :gemini_3_pro_image,
+      code: "gemini-3-pro-image",
+      source_page: "https://ai.google.dev/gemini-api/docs/models",
+      track: :stable,
+      latest_update: "August 2026",
+      input_modalities: [:text, :image],
+      output_modalities: [:image],
+      capabilities: %{
+        audio_generation: :not_supported,
+        batch_api: :unknown,
+        caching: :unknown,
+        function_calling: :unknown,
+        image_generation: :supported,
+        live_api: :unknown,
+        structured_outputs: :unknown,
+        thinking: :supported
+      },
+      aliases: [],
+      live_modalities: [],
+      notes: nil
+    },
+    %{
+      key: :gemini_3_1_flash_tts_preview,
+      code: "gemini-3.1-flash-tts-preview",
+      source_page: "https://ai.google.dev/gemini-api/docs/models",
+      track: :preview,
+      latest_update: "August 2026",
+      input_modalities: [:text],
+      output_modalities: [:audio],
+      capabilities: %{
+        audio_generation: :supported,
+        batch_api: :not_supported,
+        caching: :not_supported,
+        function_calling: :not_supported,
+        image_generation: :not_supported,
+        live_api: :not_supported,
+        structured_outputs: :not_supported,
+        thinking: :not_supported
+      },
+      aliases: [],
+      live_modalities: [],
+      notes: nil
+    },
+    %{
+      key: :gemini_3_5_live_translate_preview,
+      code: "gemini-3.5-live-translate-preview",
+      source_page: "https://ai.google.dev/gemini-api/docs/models",
+      track: :preview,
+      latest_update: "August 2026",
+      input_modalities: [:audio],
+      output_modalities: [:audio],
+      capabilities: %{
+        audio_generation: :supported,
+        batch_api: :unknown,
+        caching: :unknown,
+        function_calling: :unknown,
+        image_generation: :not_supported,
+        live_api: :unknown,
+        structured_outputs: :unknown,
+        thinking: :unknown
+      },
+      aliases: [],
+      live_modalities: [],
+      notes: nil
+    },
+    %{
+      key: :gemini_omni_flash,
+      code: "gemini-omni-flash",
+      source_page: "https://ai.google.dev/gemini-api/docs/models",
+      track: :stable,
+      latest_update: "August 2026",
+      input_modalities: [:text, :image, :video],
+      output_modalities: [:video],
+      capabilities: %{
+        audio_generation: :not_supported,
+        batch_api: :unknown,
+        caching: :unknown,
+        function_calling: :unknown,
+        image_generation: :not_supported,
+        live_api: :unknown,
+        structured_outputs: :unknown,
+        thinking: :unknown
+      },
+      # The models page lists this as `gemini-omni-flash`; the Omni guide at
+      # https://ai.google.dev/gemini-api/docs/omni uses
+      # `gemini-omni-flash-preview`. Both resolve here so either spelling works.
+      aliases: ["gemini-omni-flash-preview"],
+      live_modalities: [],
+      notes: nil
+    },
+    %{
+      key: :gemini_embedding_2_preview,
+      code: "gemini-embedding-2-preview",
+      source_page: "https://ai.google.dev/gemini-api/docs/models",
+      track: :preview,
+      latest_update: "August 2026",
+      input_modalities: [:text, :image, :video, :audio, :pdf],
+      output_modalities: [:embeddings],
+      capabilities: %{
+        audio_generation: :unknown,
+        batch_api: :unknown,
+        caching: :unknown,
+        function_calling: :unknown,
+        image_generation: :unknown,
+        live_api: :unknown,
+        structured_outputs: :unknown,
+        thinking: :unknown
+      },
+      aliases: [],
+      live_modalities: [],
+      notes: "Embedding model (not a generation model); its real output modality is embeddings"
+    },
+    %{
       key: :gemini_3_1_pro_preview,
       code: "gemini-3.1-pro-preview",
       source_page: "https://ai.google.dev/gemini-api/docs/models/gemini-3.1-pro-preview",

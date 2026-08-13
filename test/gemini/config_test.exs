@@ -261,4 +261,30 @@ defmodule Gemini.ConfigTest do
       assert "gemini-2.5-flash-native-audio-preview-12-2025" in live_models
     end
   end
+
+  describe "model aliases" do
+    @model_aliases %{
+      flash_3_6: "gemini-3.6-flash",
+      flash_3_5: "gemini-3.5-flash",
+      flash_3_5_lite: "gemini-3.5-flash-lite",
+      flash_3_1_lite: "gemini-3.1-flash-lite",
+      flash_3_1_image: "gemini-3.1-flash-image",
+      flash_3_1_lite_image: "gemini-3.1-flash-lite-image",
+      pro_3_image: "gemini-3-pro-image",
+      flash_3_1_preview_tts: "gemini-3.1-flash-tts-preview",
+      live_translate_3_5_preview: "gemini-3.5-live-translate-preview",
+      omni_flash: "gemini-omni-flash",
+      embedding_2_preview: "gemini-embedding-2-preview"
+    }
+
+    test ":latest resolves to gemini-3.6-flash" do
+      assert Gemini.Config.get_model(:latest) == "gemini-3.6-flash"
+    end
+
+    test "current model atoms resolve to their canonical names" do
+      for {model_alias, code} <- @model_aliases do
+        assert Gemini.Config.get_model(model_alias) == code
+      end
+    end
+  end
 end

@@ -64,4 +64,76 @@ defmodule Gemini.ModelRegistryTest do
                )
     end
   end
+
+  describe "current model coverage" do
+    @current_models [
+      "gemini-3.6-flash",
+      "gemini-3.5-flash",
+      "gemini-3.5-flash-lite",
+      "gemini-3.1-flash-lite",
+      "gemini-3.1-flash-image",
+      "gemini-3.1-flash-lite-image",
+      "gemini-3-pro-image",
+      "gemini-3.1-flash-tts-preview",
+      "gemini-3.5-live-translate-preview",
+      "gemini-omni-flash",
+      "gemini-embedding-2-preview"
+    ]
+
+    test "every currently documented model is registered" do
+      for code <- @current_models do
+        assert Gemini.model_exists?(code), "#{code} is not in the model registry"
+      end
+    end
+
+    test "gemini-omni-flash-preview resolves as an alias of gemini-omni-flash" do
+      assert Gemini.model_exists?("gemini-omni-flash-preview")
+
+      assert %{code: "gemini-omni-flash"} =
+               ModelRegistry.get("gemini-omni-flash-preview")
+    end
+
+    test "previously registered models are still present" do
+      for code <- ["gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-2.5-flash"] do
+        assert Gemini.model_exists?(code), "#{code} was dropped from the registry"
+      end
+    end
+
+    test "new entries use the established registry shape and documented metadata" do
+      expected_keys =
+        "gemini-3.1-pro-preview"
+        |> ModelRegistry.get()
+        |> Map.keys()
+        |> Enum.sort()
+
+      for code <- @current_models do
+        entry = ModelRegistry.get(code)
+
+        assert Enum.sort(Map.keys(entry)) == expected_keys
+        assert entry.source_page == "https://ai.google.dev/gemini-api/docs/models"
+      end
+
+      assert %{track: :stable, input_modalities: [:text, :image, :video, :audio, :pdf]} =
+               ModelRegistry.get("gemini-3.6-flash")
+
+      assert %{output_modalities: [:embeddings]} =
+               ModelRegistry.get("gemini-embedding-2-preview")
+    end
+
+    test "specialized model capabilities are recorded conservatively" do
+      assert ModelRegistry.supports?("gemini-3.1-flash-image", :image_generation)
+      assert ModelRegistry.supports?("gemini-3.1-flash-image", :thinking)
+      assert ModelRegistry.supports?("gemini-3-pro-image", :thinking)
+
+      assert ModelRegistry.supports?(
+               "gemini-3.1-flash-lite-image",
+               :thinking,
+               :not_supported
+             )
+
+      assert ModelRegistry.supports?("gemini-3.1-flash-tts-preview", :audio_generation)
+      assert ModelRegistry.supports?("gemini-omni-flash", :batch_api, :unknown)
+      assert ModelRegistry.supports?("gemini-embedding-2-preview", :thinking, :unknown)
+    end
+  end
 end

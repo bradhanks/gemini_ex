@@ -548,6 +548,8 @@ defmodule Gemini.APIs.Interactions do
   defp terminal_status?("failed"), do: true
   defp terminal_status?("cancelled"), do: true
   defp terminal_status?("requires_action"), do: true
+  defp terminal_status?("incomplete"), do: true
+  defp terminal_status?("budget_exceeded"), do: true
   defp terminal_status?(_), do: false
 
   defp validate_model_or_agent(%{model: nil, agent: nil}) do

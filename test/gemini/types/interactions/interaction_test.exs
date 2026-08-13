@@ -31,6 +31,36 @@ defmodule Gemini.Types.Interactions.InteractionTest do
       assert [%TextContent{text: "Hi"}, %TextContent{text: "Hello!"}] = interaction.outputs
     end
 
+    test "malformed known and unknown step content never leaks into typed outputs" do
+      response = %{
+        "id" => "int_malformed",
+        "status" => "completed",
+        "steps" => [
+          %{"type" => "model_output", "content" => %{"type" => "text", "text" => "scalar"}},
+          %{
+            "type" => "future_tool_call",
+            "content" => [
+              %{"type" => "text", "text" => "kept"},
+              %{"type" => "future_content", "value" => 1},
+              %{"text" => "missing type"},
+              false
+            ],
+            "opaque" => %{"preserved" => true}
+          },
+          "malformed step"
+        ]
+      }
+
+      interaction = Interaction.from_api(response)
+
+      assert [%TextContent{text: "kept"}] = interaction.outputs
+      assert Enum.all?(interaction.outputs, &is_struct/1)
+      assert Interaction.output_text(interaction) == {:error, :not_found}
+      assert Interaction.output_image(interaction) == {:error, :not_found}
+      assert Interaction.output_audio(interaction) == {:error, :not_found}
+      assert Interaction.output_video(interaction) == {:error, :not_found}
+    end
+
     test "parses the object field" do
       assert Interaction.from_api(steps_response()).object == "interaction"
     end
@@ -58,6 +88,12 @@ defmodule Gemini.Types.Interactions.InteractionTest do
       assert Interaction.output_text(interaction) == {:ok, "From server"}
     end
 
+    test "output_text/1 preserves an explicitly empty server-provided field" do
+      interaction = Interaction.from_api(Map.put(steps_response(), "output_text", ""))
+
+      assert Interaction.output_text(interaction) == {:ok, ""}
+    end
+
     test "output_text/1 falls back to the last model_output step" do
       assert Interaction.output_text(Interaction.from_api(steps_response())) == {:ok, "Hello!"}
     end
@@ -75,6 +111,22 @@ defmodule Gemini.Types.Interactions.InteractionTest do
 
     test "output_text/1 returns :not_found when there is no text anywhere" do
       interaction = Interaction.from_api(%{"id" => "i", "status" => "completed"})
+
+      assert Interaction.output_text(interaction) == {:error, :not_found}
+    end
+
+    test "output_text/1 ignores text blocks whose text value is not binary" do
+      interaction =
+        Interaction.from_api(%{
+          "id" => "i",
+          "status" => "completed",
+          "steps" => [
+            %{
+              "type" => "model_output",
+              "content" => [%{"type" => "text", "text" => %{"malformed" => true}}]
+            }
+          ]
+        })
 
       assert Interaction.output_text(interaction) == {:error, :not_found}
     end

@@ -1195,9 +1195,15 @@ defmodule Gemini.Types.Interactions.Content do
     "file_search_result" => FileSearchResultContent
   }
 
-  @spec from_api(map() | t() | nil) :: t() | nil
+  @content_modules Map.values(@type_to_module)
+
+  @spec from_api(term()) :: t() | nil
   def from_api(nil), do: nil
-  def from_api(%_{} = content), do: content
+
+  def from_api(%{__struct__: module} = content) when module in @content_modules,
+    do: content
+
+  def from_api(%_{}), do: nil
 
   def from_api(%{} = data) do
     data
@@ -1208,6 +1214,8 @@ defmodule Gemini.Types.Interactions.Content do
       module -> module.from_api(data)
     end
   end
+
+  def from_api(_), do: nil
 
   @spec to_api(t() | map() | nil) :: map() | nil
   def to_api(nil), do: nil

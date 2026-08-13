@@ -74,6 +74,51 @@ defmodule Gemini.Types.Interactions.StepTest do
       assert %UnknownStep{type: "future_tool_call", raw: ^raw} = Step.from_api(raw)
     end
 
+    test "degrades code_execution_call into UnknownStep retaining every raw field" do
+      raw = %{
+        "type" => "code_execution_call",
+        "content" => [%{"type" => "text", "text" => "legacy"}],
+        "implementation_detail" => %{"runtime" => "future"},
+        "opaque" => [1, 2, 3]
+      }
+
+      assert %UnknownStep{type: "code_execution_call", raw: ^raw} = Step.from_api(raw)
+      assert Step.to_api(Step.from_api(raw)) == raw
+    end
+
+    test "normalizes malformed known-step content and summary without raising" do
+      blocks = [
+        %{"type" => "text", "text" => "kept"},
+        %{"type" => "future_content", "raw" => true},
+        %{"text" => "missing type"},
+        "malformed"
+      ]
+
+      standard =
+        Step.from_api(%{"type" => "model_output", "content" => blocks, "summary" => blocks})
+
+      function_call = Step.from_api(%{"type" => "function_call", "content" => blocks})
+      function_result = Step.from_api(%{"type" => "function_result", "content" => blocks})
+
+      assert [%TextContent{text: "kept"}] = standard.content
+      assert [%TextContent{text: "kept"}] = standard.summary
+      assert [%TextContent{text: "kept"}] = function_call.content
+      assert [%TextContent{text: "kept"}] = function_result.content
+
+      assert %StandardStep{content: nil, summary: nil} =
+               Step.from_api(%{
+                 "type" => "model_output",
+                 "content" => %{"type" => "text"},
+                 "summary" => "malformed"
+               })
+
+      assert %FunctionCallStep{content: nil} =
+               Step.from_api(%{"type" => "function_call", "content" => %{}})
+
+      assert %FunctionResultStep{content: nil} =
+               Step.from_api(%{"type" => "function_result", "content" => 42})
+    end
+
     test "returns nil for nil" do
       assert Step.from_api(nil) == nil
     end
@@ -126,6 +171,24 @@ defmodule Gemini.Types.Interactions.StepTest do
       step = Step.from_api(%{"type" => "future_tool_call", "signature" => "sig_future"})
 
       assert Step.signature(step) == "sig_future"
+    end
+
+    test "content/1 parses only recognized typed blocks from an unknown step" do
+      raw = %{
+        "type" => "future_tool_call",
+        "content" => [
+          %{"type" => "text", "text" => "kept"},
+          %{"type" => "future_content", "value" => 1},
+          %{"text" => "missing type"},
+          123
+        ],
+        "extra" => %{"preserved" => true}
+      }
+
+      step = Step.from_api(raw)
+
+      assert [%TextContent{text: "kept"}] = Step.content(step)
+      assert Step.to_api(step) == raw
     end
   end
 

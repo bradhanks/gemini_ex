@@ -34,11 +34,11 @@ defmodule Gemini.Types.Interactions.StandardStep do
   def from_api(%{} = data) do
     %__MODULE__{
       type: Map.get(data, "type"),
-      content: map_list(Map.get(data, "content"), &Content.from_api/1),
+      content: parse_content_list(Map.get(data, "content")),
       name: Map.get(data, "name"),
       id: Map.get(data, "id"),
       signature: Map.get(data, "signature"),
-      summary: map_list(Map.get(data, "summary"), &Content.from_api/1)
+      summary: parse_content_list(Map.get(data, "summary"))
     }
   end
 
@@ -61,6 +61,16 @@ defmodule Gemini.Types.Interactions.StandardStep do
 
   defp map_list(nil, _fun), do: nil
   defp map_list(list, fun) when is_list(list), do: Enum.map(list, fun)
+
+  defp parse_content_list(nil), do: nil
+
+  defp parse_content_list(list) when is_list(list) do
+    list
+    |> Enum.map(&Content.from_api/1)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp parse_content_list(_), do: nil
 end
 
 defmodule Gemini.Types.Interactions.FunctionCallStep do
@@ -93,7 +103,7 @@ defmodule Gemini.Types.Interactions.FunctionCallStep do
   def from_api(%{} = data) do
     %__MODULE__{
       type: Map.get(data, "type") || "function_call",
-      content: map_list(Map.get(data, "content"), &Content.from_api/1),
+      content: parse_content_list(Map.get(data, "content")),
       name: Map.get(data, "name"),
       id: Map.get(data, "id"),
       arguments: Map.get(data, "arguments")
@@ -117,6 +127,16 @@ defmodule Gemini.Types.Interactions.FunctionCallStep do
 
   defp map_list(nil, _fun), do: nil
   defp map_list(list, fun) when is_list(list), do: Enum.map(list, fun)
+
+  defp parse_content_list(nil), do: nil
+
+  defp parse_content_list(list) when is_list(list) do
+    list
+    |> Enum.map(&Content.from_api/1)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp parse_content_list(_), do: nil
 end
 
 defmodule Gemini.Types.Interactions.FunctionResultStep do
@@ -149,7 +169,7 @@ defmodule Gemini.Types.Interactions.FunctionResultStep do
   def from_api(%{} = data) do
     %__MODULE__{
       type: Map.get(data, "type") || "function_result",
-      content: map_list(Map.get(data, "content"), &Content.from_api/1),
+      content: parse_content_list(Map.get(data, "content")),
       name: Map.get(data, "name"),
       call_id: Map.get(data, "call_id"),
       signature: Map.get(data, "signature")
@@ -173,6 +193,16 @@ defmodule Gemini.Types.Interactions.FunctionResultStep do
 
   defp map_list(nil, _fun), do: nil
   defp map_list(list, fun) when is_list(list), do: Enum.map(list, fun)
+
+  defp parse_content_list(nil), do: nil
+
+  defp parse_content_list(list) when is_list(list) do
+    list
+    |> Enum.map(&Content.from_api/1)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp parse_content_list(_), do: nil
 end
 
 defmodule Gemini.Types.Interactions.UnknownStep do
@@ -220,6 +250,7 @@ defmodule Gemini.Types.Interactions.Step do
   """
 
   alias Gemini.Types.Interactions.{
+    Content,
     FunctionCallStep,
     FunctionResultStep,
     StandardStep,
@@ -233,7 +264,6 @@ defmodule Gemini.Types.Interactions.Step do
     model_output
     thought
     code_execution
-    code_execution_call
     code_execution_result
     file_search_call
     file_search_result
@@ -259,9 +289,13 @@ defmodule Gemini.Types.Interactions.Step do
   @doc """
   Parses an API response step into its typed representation.
   """
-  @spec from_api(map() | t() | nil) :: t() | nil
+  @spec from_api(term()) :: t() | nil
   def from_api(nil), do: nil
-  def from_api(%_{} = step), do: step
+  def from_api(%StandardStep{} = step), do: step
+  def from_api(%FunctionCallStep{} = step), do: step
+  def from_api(%FunctionResultStep{} = step), do: step
+  def from_api(%UnknownStep{} = step), do: step
+  def from_api(%_{}), do: nil
 
   def from_api(%{} = data) do
     case Map.get(data, "type") do
@@ -271,6 +305,8 @@ defmodule Gemini.Types.Interactions.Step do
       _ -> UnknownStep.from_api(data)
     end
   end
+
+  def from_api(_), do: nil
 
   @doc """
   Serializes a response step for the API.
@@ -284,12 +320,14 @@ defmodule Gemini.Types.Interactions.Step do
   def to_api(%UnknownStep{} = step), do: UnknownStep.to_api(step)
 
   @doc """
-  Content blocks carried by a step. Returns `[]` when the step has none.
+  Recognized, typed content blocks carried by a step. Returns `[]` when the
+  step has none and excludes malformed or unrecognized blocks.
   """
   @spec content(t()) :: [Gemini.Types.Interactions.Content.t()]
-  def content(%UnknownStep{raw: raw}), do: Map.get(raw, "content") || []
-  def content(%{content: nil}), do: []
-  def content(%{content: content}) when is_list(content), do: content
+  def content(%UnknownStep{raw: raw}) when is_map(raw),
+    do: parse_content_list(Map.get(raw, "content"))
+
+  def content(%{content: content}), do: parse_content_list(content)
   def content(_), do: []
 
   @doc """
@@ -299,4 +337,12 @@ defmodule Gemini.Types.Interactions.Step do
   def signature(%UnknownStep{raw: raw}), do: Map.get(raw, "signature")
   def signature(%{signature: signature}), do: signature
   def signature(_), do: nil
+
+  defp parse_content_list(list) when is_list(list) do
+    list
+    |> Enum.map(&Content.from_api/1)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp parse_content_list(_), do: []
 end

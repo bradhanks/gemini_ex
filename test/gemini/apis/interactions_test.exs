@@ -183,6 +183,54 @@ defmodule Gemini.APIs.InteractionsTest do
     end
   end
 
+  describe "wait_for_completion/2" do
+    test "returns an incomplete interaction without polling again", %{bypass: bypass} do
+      :meck.expect(Gemini.Auth, :get_base_url, fn _type, _creds ->
+        "http://localhost:#{bypass.port}"
+      end)
+
+      Gemini.TestHTTPServer.expect_once(bypass, "GET", "/v1beta/interactions/int_123", fn conn ->
+        conn
+        |> Conn.put_resp_content_type("application/json")
+        |> Conn.resp(200, Jason.encode!(interaction_json(%{"status" => "incomplete"})))
+      end)
+
+      assert {:ok, interaction} =
+               Interactions.wait_for_completion("int_123",
+                 auth: :gemini,
+                 api_key: "test",
+                 poll_interval_ms: 0,
+                 timeout_ms: 0,
+                 timeout: 2_000
+               )
+
+      assert interaction.status == "incomplete"
+    end
+
+    test "returns a budget-exceeded interaction without polling again", %{bypass: bypass} do
+      :meck.expect(Gemini.Auth, :get_base_url, fn _type, _creds ->
+        "http://localhost:#{bypass.port}"
+      end)
+
+      Gemini.TestHTTPServer.expect_once(bypass, "GET", "/v1beta/interactions/int_123", fn conn ->
+        conn
+        |> Conn.put_resp_content_type("application/json")
+        |> Conn.resp(200, Jason.encode!(interaction_json(%{"status" => "budget_exceeded"})))
+      end)
+
+      assert {:ok, interaction} =
+               Interactions.wait_for_completion("int_123",
+                 auth: :gemini,
+                 api_key: "test",
+                 poll_interval_ms: 0,
+                 timeout_ms: 0,
+                 timeout: 2_000
+               )
+
+      assert interaction.status == "budget_exceeded"
+    end
+  end
+
   describe "streaming" do
     test "create streaming uses SSE transport (no alt=sse) and decodes events", %{bypass: bypass} do
       :meck.expect(Gemini.Auth, :get_base_url, fn _type, _creds ->

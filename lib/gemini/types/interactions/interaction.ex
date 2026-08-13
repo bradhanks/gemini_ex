@@ -69,7 +69,7 @@ defmodule Gemini.Types.Interactions.Interaction do
   def from_api(%__MODULE__{} = interaction), do: interaction
 
   def from_api(%{} = data) do
-    steps = map_list(Map.get(data, "steps"), &Step.from_api/1)
+    steps = parse_steps(Map.get(data, "steps"))
 
     %__MODULE__{
       id: Map.get(data, "id"),
@@ -149,7 +149,7 @@ defmodule Gemini.Types.Interactions.Interaction do
   present, or text in legacy `outputs` when `steps` are absent.
   """
   @spec output_text(t()) :: {:ok, String.t()} | {:error, :not_found}
-  def output_text(%__MODULE__{output_text: text}) when is_binary(text) and text != "",
+  def output_text(%__MODULE__{output_text: text}) when is_binary(text),
     do: {:ok, text}
 
   def output_text(%__MODULE__{} = interaction) do
@@ -203,7 +203,14 @@ defmodule Gemini.Types.Interactions.Interaction do
     do: Enum.flat_map(steps, &Step.content/1)
 
   defp parse_outputs(nil, nil), do: nil
-  defp parse_outputs(outputs, nil), do: map_list(outputs, &Content.from_api/1)
+
+  defp parse_outputs(outputs, nil) when is_list(outputs) do
+    outputs
+    |> Enum.map(&Content.from_api/1)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp parse_outputs(_outputs, nil), do: nil
 
   defp last_model_output_text(%__MODULE__{steps: steps}) when is_list(steps) do
     steps
@@ -222,8 +229,11 @@ defmodule Gemini.Types.Interactions.Interaction do
 
   defp text_of(blocks) when is_list(blocks) do
     blocks
-    |> Enum.filter(&is_struct(&1, TextContent))
-    |> Enum.map_join("", & &1.text)
+    |> Enum.flat_map(fn
+      %TextContent{text: text} when is_binary(text) -> [text]
+      _ -> []
+    end)
+    |> Enum.join()
     |> case do
       "" -> nil
       text -> text
@@ -266,6 +276,16 @@ defmodule Gemini.Types.Interactions.Interaction do
 
   defp datetime_to_iso8601(nil), do: nil
   defp datetime_to_iso8601(%DateTime{} = dt), do: DateTime.to_iso8601(dt)
+
+  defp parse_steps(nil), do: nil
+
+  defp parse_steps(steps) when is_list(steps) do
+    steps
+    |> Enum.map(&Step.from_api/1)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp parse_steps(_), do: nil
 
   defp map_list(nil, _fun), do: nil
 

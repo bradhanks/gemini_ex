@@ -198,10 +198,10 @@ defmodule Gemini.Types.Generation.Image do
 
   ## Examples
 
-      iex> parse_safety_filter_level("BLOCK_SOME")
+      iex> Gemini.Types.Generation.Image.parse_safety_filter_level("BLOCK_SOME")
       :block_some
 
-      iex> parse_safety_filter_level(:block_most)
+      iex> Gemini.Types.Generation.Image.parse_safety_filter_level(:block_most)
       :block_most
   """
   @spec parse_safety_filter_level(String.t() | atom()) :: safety_filter_level()
@@ -218,7 +218,7 @@ defmodule Gemini.Types.Generation.Image do
 
   ## Examples
 
-      iex> format_safety_filter_level(:block_some)
+      iex> Gemini.Types.Generation.Image.format_safety_filter_level(:block_some)
       "blockSome"
   """
   @spec format_safety_filter_level(safety_filter_level()) :: String.t()
@@ -232,7 +232,7 @@ defmodule Gemini.Types.Generation.Image do
 
   ## Examples
 
-      iex> format_person_generation(:allow_adult)
+      iex> Gemini.Types.Generation.Image.format_person_generation(:allow_adult)
       "allowAdult"
   """
   @spec format_person_generation(person_generation()) :: String.t()
@@ -246,7 +246,7 @@ defmodule Gemini.Types.Generation.Image do
 
   ## Examples
 
-      iex> format_edit_mode(:inpainting)
+      iex> Gemini.Types.Generation.Image.format_edit_mode(:inpainting)
       "inpainting"
   """
   @spec format_edit_mode(edit_mode()) :: String.t()
@@ -259,7 +259,7 @@ defmodule Gemini.Types.Generation.Image do
 
   ## Examples
 
-      iex> format_upscale_factor(:x2)
+      iex> Gemini.Types.Generation.Image.format_upscale_factor(:x2)
       "x2"
   """
   @spec format_upscale_factor(upscale_factor()) :: String.t()

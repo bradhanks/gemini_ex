@@ -28,9 +28,9 @@ defmodule Gemini.SSE.Parser do
 
   ## Examples
 
-      iex> parser = SSE.Parser.new()
-      iex> chunk = "data: {\\"text\\": \\"hello\\"}\n\n"
-      iex> {:ok, events, new_parser} = SSE.Parser.parse_chunk(chunk, parser)
+      iex> parser = Gemini.SSE.Parser.new()
+      iex> chunk = "data: {\\"text\\": \\"hello\\"}\\n\\n"
+      iex> {:ok, events, _parser} = Gemini.SSE.Parser.parse_chunk(chunk, parser)
       iex> length(events)
       1
   """

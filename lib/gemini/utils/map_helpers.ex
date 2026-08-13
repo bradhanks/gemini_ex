@@ -92,9 +92,11 @@ defmodule Gemini.Utils.MapHelpers do
       |> add_query_param("pageToken", Keyword.get(opts, :page_token))
       |> add_query_param("filter", Keyword.get(opts, :filter))
 
+    # add_query_param/3 prepends, so reverse to emit params in the documented
+    # pageSize/pageToken/filter order rather than backwards.
     case query_params do
       [] -> base_path
-      params -> "#{base_path}?#{URI.encode_query(params)}"
+      params -> "#{base_path}?#{URI.encode_query(Enum.reverse(params))}"
     end
   end
 

@@ -13,7 +13,10 @@ defmodule Gemini.APIs.InteractionsTest do
     ContentStop,
     ErrorEvent,
     InteractionEvent,
-    InteractionStatusUpdate
+    InteractionStatusUpdate,
+    StepDelta,
+    StepStart,
+    StepStop
   }
 
   setup do
@@ -537,6 +540,52 @@ defmodule Gemini.APIs.InteractionsTest do
 
       assert MapSet.equal?(links_before, links_after)
       assert [] == Enum.to_list(stream)
+    end
+  end
+
+  describe "create/2 streaming with step.* events" do
+    test "yields StepDelta events from an SSE stream", %{bypass: bypass} do
+      :meck.expect(Gemini.Auth, :get_base_url, fn _type, _creds ->
+        "http://localhost:#{bypass.port}"
+      end)
+
+      body =
+        [
+          ~s(data: {"event_type":"interaction.created","interaction":{"id":"i","status":"in_progress"}}\n\n),
+          ~s(data: {"event_type":"step.start","index":0}\n\n),
+          ~s(data: {"event_type":"step.delta","index":0,"delta":{"type":"text","text":"Hel"}}\n\n),
+          ~s(data: {"event_type":"step.delta","index":0,"delta":{"type":"text","text":"lo"}}\n\n),
+          ~s(data: {"event_type":"step.stop","index":0}\n\n),
+          ~s(data: [DONE]\n\n)
+        ]
+        |> Enum.join()
+
+      Gemini.TestHTTPServer.expect_once(bypass, "POST", "/v1beta/interactions", fn conn ->
+        conn
+        |> Conn.put_resp_content_type("text/event-stream")
+        |> Conn.resp(200, body)
+      end)
+
+      assert {:ok, stream} =
+               Interactions.create("hi",
+                 auth: :gemini,
+                 api_key: "test",
+                 model: "gemini-3.6-flash",
+                 stream: true,
+                 max_retries: 0
+               )
+
+      events = Enum.to_list(stream)
+
+      text =
+        events
+        |> Enum.filter(&is_struct(&1, StepDelta))
+        |> Enum.map(& &1.delta.text)
+        |> Enum.join()
+
+      assert text == "Hello"
+      assert Enum.any?(events, &is_struct(&1, StepStart))
+      assert Enum.any?(events, &is_struct(&1, StepStop))
     end
   end
 end

@@ -78,7 +78,10 @@ end
 
 defmodule Gemini.Types.Interactions.Events.InteractionEvent do
   @moduledoc """
-  Interactions SSE event: `interaction.start` or `interaction.complete`.
+  Interactions SSE event: `interaction.created` or `interaction.completed`.
+
+  The legacy `interaction.start` and `interaction.complete` spellings are also
+  supported.
   """
 
   use TypedStruct
@@ -291,9 +294,145 @@ defmodule Gemini.Types.Interactions.Events.ContentStop do
   end
 end
 
+defmodule Gemini.Types.Interactions.Events.StepStart do
+  @moduledoc """
+  Interactions SSE event: `step.start`.
+  """
+
+  use TypedStruct
+
+  import Gemini.Utils.MapHelpers, only: [maybe_put: 3]
+
+  alias Gemini.Types.Interactions.Step
+
+  @derive Jason.Encoder
+  typedstruct do
+    field(:event_id, String.t())
+    field(:event_type, String.t())
+    field(:index, non_neg_integer())
+    field(:step, Step.t())
+  end
+
+  @spec from_api(map() | t() | nil) :: t() | nil
+  def from_api(nil), do: nil
+  def from_api(%__MODULE__{} = event), do: event
+
+  def from_api(%{} = data) do
+    %__MODULE__{
+      event_id: Map.get(data, "event_id"),
+      event_type: Map.get(data, "event_type"),
+      index: Map.get(data, "index"),
+      step: Step.from_api(Map.get(data, "step"))
+    }
+  end
+
+  @spec to_api(t() | map() | nil) :: map() | nil
+  def to_api(nil), do: nil
+  def to_api(%{} = map) when not is_struct(map), do: map
+
+  def to_api(%__MODULE__{} = event) do
+    %{"event_type" => "step.start"}
+    |> maybe_put("event_id", event.event_id)
+    |> maybe_put("index", event.index)
+    |> maybe_put("step", Step.to_api(event.step))
+  end
+end
+
+defmodule Gemini.Types.Interactions.Events.StepDelta do
+  @moduledoc """
+  Interactions SSE event: `step.delta`.
+
+  Carries one `Gemini.Types.Interactions.Delta` variant. Delta types include
+  `text`, `thought_summary`, `thought_signature`, `audio`, `image`, `video`,
+  and the tool call/result variants.
+  """
+
+  use TypedStruct
+
+  import Gemini.Utils.MapHelpers, only: [maybe_put: 3]
+
+  alias Gemini.Types.Interactions.Delta
+
+  @derive Jason.Encoder
+  typedstruct do
+    field(:event_id, String.t())
+    field(:event_type, String.t())
+    field(:index, non_neg_integer())
+    field(:delta, Delta.t())
+  end
+
+  @spec from_api(map() | t() | nil) :: t() | nil
+  def from_api(nil), do: nil
+  def from_api(%__MODULE__{} = event), do: event
+
+  def from_api(%{} = data) do
+    %__MODULE__{
+      event_id: Map.get(data, "event_id"),
+      event_type: Map.get(data, "event_type"),
+      index: Map.get(data, "index"),
+      delta: Delta.from_api(Map.get(data, "delta"))
+    }
+  end
+
+  @spec to_api(t() | map() | nil) :: map() | nil
+  def to_api(nil), do: nil
+  def to_api(%{} = map) when not is_struct(map), do: map
+
+  def to_api(%__MODULE__{} = event) do
+    %{"event_type" => "step.delta"}
+    |> maybe_put("event_id", event.event_id)
+    |> maybe_put("index", event.index)
+    |> maybe_put("delta", Delta.to_api(event.delta))
+  end
+end
+
+defmodule Gemini.Types.Interactions.Events.StepStop do
+  @moduledoc """
+  Interactions SSE event: `step.stop`.
+  """
+
+  use TypedStruct
+
+  import Gemini.Utils.MapHelpers, only: [maybe_put: 3]
+
+  alias Gemini.Types.Interactions.Step
+
+  @derive Jason.Encoder
+  typedstruct do
+    field(:event_id, String.t())
+    field(:event_type, String.t())
+    field(:index, non_neg_integer())
+    field(:step, Step.t())
+  end
+
+  @spec from_api(map() | t() | nil) :: t() | nil
+  def from_api(nil), do: nil
+  def from_api(%__MODULE__{} = event), do: event
+
+  def from_api(%{} = data) do
+    %__MODULE__{
+      event_id: Map.get(data, "event_id"),
+      event_type: Map.get(data, "event_type"),
+      index: Map.get(data, "index"),
+      step: Step.from_api(Map.get(data, "step"))
+    }
+  end
+
+  @spec to_api(t() | map() | nil) :: map() | nil
+  def to_api(nil), do: nil
+  def to_api(%{} = map) when not is_struct(map), do: map
+
+  def to_api(%__MODULE__{} = event) do
+    %{"event_type" => "step.stop"}
+    |> maybe_put("event_id", event.event_id)
+    |> maybe_put("index", event.index)
+    |> maybe_put("step", Step.to_api(event.step))
+  end
+end
+
 defmodule Gemini.Types.Interactions.Events.InteractionSSEEvent do
   @moduledoc """
-  Union type for Interactions SSE events (6 variants).
+  Union type for Interactions SSE events.
   """
 
   alias Gemini.Types.Interactions.Events.{
@@ -302,7 +441,10 @@ defmodule Gemini.Types.Interactions.Events.InteractionSSEEvent do
     ContentStop,
     ErrorEvent,
     InteractionEvent,
-    InteractionStatusUpdate
+    InteractionStatusUpdate,
+    StepDelta,
+    StepStart,
+    StepStop
   }
 
   @type t ::
@@ -311,7 +453,47 @@ defmodule Gemini.Types.Interactions.Events.InteractionSSEEvent do
           | ContentStart.t()
           | ContentDelta.t()
           | ContentStop.t()
+          | StepStart.t()
+          | StepDelta.t()
+          | StepStop.t()
           | ErrorEvent.t()
+
+  @doc """
+  Decodes an Interactions SSE event payload.
+
+  Current `interaction.created` and `interaction.completed` spellings, as
+  well as the legacy `interaction.start` and `interaction.complete` spellings,
+  decode as `InteractionEvent`.
+  """
+  @spec from_api(map() | t() | nil) :: t() | nil
+  def from_api(nil), do: nil
+  def from_api(%InteractionEvent{} = event), do: event
+  def from_api(%InteractionStatusUpdate{} = event), do: event
+  def from_api(%ContentStart{} = event), do: event
+  def from_api(%ContentDelta{} = event), do: event
+  def from_api(%ContentStop{} = event), do: event
+  def from_api(%StepStart{} = event), do: event
+  def from_api(%StepDelta{} = event), do: event
+  def from_api(%StepStop{} = event), do: event
+  def from_api(%ErrorEvent{} = event), do: event
+
+  def from_api(%{} = data) do
+    case Map.get(data, "event_type") do
+      "interaction.created" -> InteractionEvent.from_api(data)
+      "interaction.completed" -> InteractionEvent.from_api(data)
+      "interaction.status_update" -> InteractionStatusUpdate.from_api(data)
+      "step.start" -> StepStart.from_api(data)
+      "step.delta" -> StepDelta.from_api(data)
+      "step.stop" -> StepStop.from_api(data)
+      "error" -> ErrorEvent.from_api(data)
+      "interaction.start" -> InteractionEvent.from_api(data)
+      "interaction.complete" -> InteractionEvent.from_api(data)
+      "content.start" -> ContentStart.from_api(data)
+      "content.delta" -> ContentDelta.from_api(data)
+      "content.stop" -> ContentStop.from_api(data)
+      _ -> nil
+    end
+  end
 end
 
 defmodule Gemini.Types.Interactions.Events do
@@ -320,29 +502,15 @@ defmodule Gemini.Types.Interactions.Events do
   """
 
   alias Gemini.Types.Interactions.Events.{
-    ContentDelta,
-    ContentStart,
-    ContentStop,
-    ErrorEvent,
-    InteractionEvent,
-    InteractionSSEEvent,
-    InteractionStatusUpdate
+    InteractionSSEEvent
   }
 
-  @spec from_api(map() | InteractionSSEEvent.t() | nil) :: InteractionSSEEvent.t() | nil
-  def from_api(nil), do: nil
-  def from_api(%_{} = event), do: event
+  @doc """
+  Decodes an Interactions SSE event payload.
 
-  def from_api(%{} = data) do
-    case Map.get(data, "event_type") do
-      "interaction.start" -> InteractionEvent.from_api(data)
-      "interaction.complete" -> InteractionEvent.from_api(data)
-      "interaction.status_update" -> InteractionStatusUpdate.from_api(data)
-      "content.start" -> ContentStart.from_api(data)
-      "content.delta" -> ContentDelta.from_api(data)
-      "content.stop" -> ContentStop.from_api(data)
-      "error" -> ErrorEvent.from_api(data)
-      _ -> nil
-    end
-  end
+  Delegates to `InteractionSSEEvent.from_api/1`; retained for backwards
+  compatibility with the existing transport entry point.
+  """
+  @spec from_api(map() | InteractionSSEEvent.t() | nil) :: InteractionSSEEvent.t() | nil
+  defdelegate from_api(data), to: InteractionSSEEvent
 end

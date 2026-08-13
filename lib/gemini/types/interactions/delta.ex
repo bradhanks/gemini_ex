@@ -905,9 +905,283 @@ defmodule Gemini.Types.Interactions.DeltaFileSearchResultDelta do
   defp map_list(list, fun) when is_list(list), do: Enum.map(list, fun)
 end
 
+defmodule Gemini.Types.Interactions.DeltaArgumentsDelta do
+  @moduledoc """
+  Delta variant `arguments_delta`: a chunk of a streaming function call's
+  arguments. Concatenate `arguments` across deltas, then decode as JSON.
+  """
+
+  use TypedStruct
+
+  import Gemini.Utils.MapHelpers, only: [maybe_put: 3]
+
+  @derive Jason.Encoder
+  typedstruct do
+    field(:type, String.t(), default: "arguments_delta")
+    field(:arguments, String.t())
+    field(:id, String.t())
+    field(:name, String.t())
+  end
+
+  @doc "Builds the typed arguments delta from an API map."
+  @spec from_api(map() | nil) :: t() | nil
+  def from_api(nil), do: nil
+  def from_api(%__MODULE__{} = delta), do: delta
+
+  def from_api(%{} = data) do
+    %__MODULE__{
+      type: Map.get(data, "type") || "arguments_delta",
+      arguments: Map.get(data, "arguments"),
+      id: Map.get(data, "id"),
+      name: Map.get(data, "name")
+    }
+  end
+
+  @doc "Converts an arguments delta to its API map representation."
+  @spec to_api(t() | map() | nil) :: map() | nil
+  def to_api(nil), do: nil
+  def to_api(%{} = map) when not is_struct(map), do: map
+
+  def to_api(%__MODULE__{} = delta) do
+    %{"type" => "arguments_delta"}
+    |> maybe_put("arguments", delta.arguments)
+    |> maybe_put("id", delta.id)
+    |> maybe_put("name", delta.name)
+  end
+end
+
+defmodule Gemini.Types.Interactions.DeltaTextAnnotationDelta do
+  @moduledoc """
+  Delta variant `text_annotation_delta`: a citation or annotation attached to
+  streamed text.
+  """
+
+  use TypedStruct
+
+  import Gemini.Utils.MapHelpers, only: [maybe_put: 3]
+
+  @derive Jason.Encoder
+  typedstruct do
+    field(:type, String.t(), default: "text_annotation_delta")
+    field(:annotation, map())
+  end
+
+  @doc "Builds the typed text annotation delta from an API map."
+  @spec from_api(map() | nil) :: t() | nil
+  def from_api(nil), do: nil
+  def from_api(%__MODULE__{} = delta), do: delta
+
+  def from_api(%{} = data) do
+    %__MODULE__{
+      type: Map.get(data, "type") || "text_annotation_delta",
+      annotation: Map.get(data, "annotation")
+    }
+  end
+
+  @doc "Converts a text annotation delta to its API map representation."
+  @spec to_api(t() | map() | nil) :: map() | nil
+  def to_api(nil), do: nil
+  def to_api(%{} = map) when not is_struct(map), do: map
+
+  def to_api(%__MODULE__{} = delta) do
+    %{"type" => "text_annotation_delta"}
+    |> maybe_put("annotation", delta.annotation)
+  end
+end
+
+defmodule Gemini.Types.Interactions.DeltaGoogleMapsCallDelta do
+  @moduledoc "Delta variant `google_maps_call`."
+  use TypedStruct
+
+  import Gemini.Utils.MapHelpers, only: [maybe_put: 3]
+
+  @derive Jason.Encoder
+  typedstruct do
+    field(:type, String.t(), default: "google_maps_call")
+    field(:id, String.t())
+    field(:result, term())
+  end
+
+  @doc "Builds the typed Google Maps call delta from an API map."
+  @spec from_api(map() | nil) :: t() | nil
+  def from_api(nil), do: nil
+  def from_api(%__MODULE__{} = delta), do: delta
+
+  def from_api(%{} = data) do
+    %__MODULE__{
+      type: Map.get(data, "type") || "google_maps_call",
+      id: Map.get(data, "id"),
+      result: Map.get(data, "result")
+    }
+  end
+
+  @doc "Converts a Google Maps call delta to its API map representation."
+  @spec to_api(t() | map() | nil) :: map() | nil
+  def to_api(nil), do: nil
+  def to_api(%{} = map) when not is_struct(map), do: map
+
+  def to_api(%__MODULE__{} = delta) do
+    %{"type" => "google_maps_call"}
+    |> maybe_put("id", delta.id)
+    |> maybe_put("result", delta.result)
+  end
+end
+
+defmodule Gemini.Types.Interactions.DeltaGoogleMapsResultDelta do
+  @moduledoc "Delta variant `google_maps_result`."
+  use TypedStruct
+
+  import Gemini.Utils.MapHelpers, only: [maybe_put: 3]
+
+  @derive Jason.Encoder
+  typedstruct do
+    field(:type, String.t(), default: "google_maps_result")
+    field(:id, String.t())
+    field(:result, term())
+  end
+
+  @doc "Builds the typed Google Maps result delta from an API map."
+  @spec from_api(map() | nil) :: t() | nil
+  def from_api(nil), do: nil
+  def from_api(%__MODULE__{} = delta), do: delta
+
+  def from_api(%{} = data) do
+    %__MODULE__{
+      type: Map.get(data, "type") || "google_maps_result",
+      id: Map.get(data, "id"),
+      result: Map.get(data, "result")
+    }
+  end
+
+  @doc "Converts a Google Maps result delta to its API map representation."
+  @spec to_api(t() | map() | nil) :: map() | nil
+  def to_api(nil), do: nil
+  def to_api(%{} = map) when not is_struct(map), do: map
+
+  def to_api(%__MODULE__{} = delta) do
+    %{"type" => "google_maps_result"}
+    |> maybe_put("id", delta.id)
+    |> maybe_put("result", delta.result)
+  end
+end
+
+defmodule Gemini.Types.Interactions.DeltaRetrievalCallDelta do
+  @moduledoc "Delta variant `retrieval_call`."
+  use TypedStruct
+
+  import Gemini.Utils.MapHelpers, only: [maybe_put: 3]
+
+  @derive Jason.Encoder
+  typedstruct do
+    field(:type, String.t(), default: "retrieval_call")
+    field(:id, String.t())
+    field(:result, term())
+  end
+
+  @doc "Builds the typed retrieval call delta from an API map."
+  @spec from_api(map() | nil) :: t() | nil
+  def from_api(nil), do: nil
+  def from_api(%__MODULE__{} = delta), do: delta
+
+  def from_api(%{} = data) do
+    %__MODULE__{
+      type: Map.get(data, "type") || "retrieval_call",
+      id: Map.get(data, "id"),
+      result: Map.get(data, "result")
+    }
+  end
+
+  @doc "Converts a retrieval call delta to its API map representation."
+  @spec to_api(t() | map() | nil) :: map() | nil
+  def to_api(nil), do: nil
+  def to_api(%{} = map) when not is_struct(map), do: map
+
+  def to_api(%__MODULE__{} = delta) do
+    %{"type" => "retrieval_call"}
+    |> maybe_put("id", delta.id)
+    |> maybe_put("result", delta.result)
+  end
+end
+
+defmodule Gemini.Types.Interactions.DeltaRetrievalResultDelta do
+  @moduledoc "Delta variant `retrieval_result`."
+  use TypedStruct
+
+  import Gemini.Utils.MapHelpers, only: [maybe_put: 3]
+
+  @derive Jason.Encoder
+  typedstruct do
+    field(:type, String.t(), default: "retrieval_result")
+    field(:id, String.t())
+    field(:result, term())
+  end
+
+  @doc "Builds the typed retrieval result delta from an API map."
+  @spec from_api(map() | nil) :: t() | nil
+  def from_api(nil), do: nil
+  def from_api(%__MODULE__{} = delta), do: delta
+
+  def from_api(%{} = data) do
+    %__MODULE__{
+      type: Map.get(data, "type") || "retrieval_result",
+      id: Map.get(data, "id"),
+      result: Map.get(data, "result")
+    }
+  end
+
+  @doc "Converts a retrieval result delta to its API map representation."
+  @spec to_api(t() | map() | nil) :: map() | nil
+  def to_api(nil), do: nil
+  def to_api(%{} = map) when not is_struct(map), do: map
+
+  def to_api(%__MODULE__{} = delta) do
+    %{"type" => "retrieval_result"}
+    |> maybe_put("id", delta.id)
+    |> maybe_put("result", delta.result)
+  end
+end
+
+defmodule Gemini.Types.Interactions.DeltaFileSearchCallDelta do
+  @moduledoc "Delta variant `file_search_call`."
+  use TypedStruct
+
+  import Gemini.Utils.MapHelpers, only: [maybe_put: 3]
+
+  @derive Jason.Encoder
+  typedstruct do
+    field(:type, String.t(), default: "file_search_call")
+    field(:id, String.t())
+    field(:result, term())
+  end
+
+  @doc "Builds the typed file search call delta from an API map."
+  @spec from_api(map() | nil) :: t() | nil
+  def from_api(nil), do: nil
+  def from_api(%__MODULE__{} = delta), do: delta
+
+  def from_api(%{} = data) do
+    %__MODULE__{
+      type: Map.get(data, "type") || "file_search_call",
+      id: Map.get(data, "id"),
+      result: Map.get(data, "result")
+    }
+  end
+
+  @doc "Converts a file search call delta to its API map representation."
+  @spec to_api(t() | map() | nil) :: map() | nil
+  def to_api(nil), do: nil
+  def to_api(%{} = map) when not is_struct(map), do: map
+
+  def to_api(%__MODULE__{} = delta) do
+    %{"type" => "file_search_call"}
+    |> maybe_put("id", delta.id)
+    |> maybe_put("result", delta.result)
+  end
+end
+
 defmodule Gemini.Types.Interactions.Delta do
   @moduledoc """
-  Discriminated union for `content.delta.delta` payloads (18 variants).
+  Discriminated union for `content.delta.delta` and `step.delta.delta` payloads.
   """
 
   alias Gemini.Types.Interactions.{
@@ -915,15 +1189,22 @@ defmodule Gemini.Types.Interactions.Delta do
     DeltaCodeExecutionCallDelta,
     DeltaCodeExecutionResultDelta,
     DeltaDocumentDelta,
+    DeltaFileSearchCallDelta,
     DeltaFileSearchResultDelta,
     DeltaFunctionCallDelta,
     DeltaFunctionResultDelta,
     DeltaGoogleSearchCallDelta,
     DeltaGoogleSearchResultDelta,
+    DeltaGoogleMapsCallDelta,
+    DeltaGoogleMapsResultDelta,
     DeltaImageDelta,
     DeltaMCPServerToolCallDelta,
     DeltaMCPServerToolResultDelta,
+    DeltaArgumentsDelta,
+    DeltaRetrievalCallDelta,
+    DeltaRetrievalResultDelta,
     DeltaTextDelta,
+    DeltaTextAnnotationDelta,
     DeltaThoughtSignatureDelta,
     DeltaThoughtSummaryDelta,
     DeltaURLContextCallDelta,
@@ -950,6 +1231,13 @@ defmodule Gemini.Types.Interactions.Delta do
           | DeltaMCPServerToolCallDelta.t()
           | DeltaMCPServerToolResultDelta.t()
           | DeltaFileSearchResultDelta.t()
+          | DeltaArgumentsDelta.t()
+          | DeltaTextAnnotationDelta.t()
+          | DeltaGoogleMapsCallDelta.t()
+          | DeltaGoogleMapsResultDelta.t()
+          | DeltaRetrievalCallDelta.t()
+          | DeltaRetrievalResultDelta.t()
+          | DeltaFileSearchCallDelta.t()
           | map()
 
   @type_to_module %{
@@ -970,7 +1258,14 @@ defmodule Gemini.Types.Interactions.Delta do
     "google_search_result" => DeltaGoogleSearchResultDelta,
     "mcp_server_tool_call" => DeltaMCPServerToolCallDelta,
     "mcp_server_tool_result" => DeltaMCPServerToolResultDelta,
-    "file_search_result" => DeltaFileSearchResultDelta
+    "file_search_result" => DeltaFileSearchResultDelta,
+    "arguments_delta" => DeltaArgumentsDelta,
+    "text_annotation_delta" => DeltaTextAnnotationDelta,
+    "google_maps_call" => DeltaGoogleMapsCallDelta,
+    "google_maps_result" => DeltaGoogleMapsResultDelta,
+    "retrieval_call" => DeltaRetrievalCallDelta,
+    "retrieval_result" => DeltaRetrievalResultDelta,
+    "file_search_call" => DeltaFileSearchCallDelta
   }
 
   @spec from_api(map() | t() | nil) :: t() | nil
@@ -1020,4 +1315,11 @@ defmodule Gemini.Types.Interactions.Delta do
     do: DeltaMCPServerToolResultDelta.to_api(delta)
 
   def to_api(%DeltaFileSearchResultDelta{} = delta), do: DeltaFileSearchResultDelta.to_api(delta)
+  def to_api(%DeltaArgumentsDelta{} = delta), do: DeltaArgumentsDelta.to_api(delta)
+  def to_api(%DeltaTextAnnotationDelta{} = delta), do: DeltaTextAnnotationDelta.to_api(delta)
+  def to_api(%DeltaGoogleMapsCallDelta{} = delta), do: DeltaGoogleMapsCallDelta.to_api(delta)
+  def to_api(%DeltaGoogleMapsResultDelta{} = delta), do: DeltaGoogleMapsResultDelta.to_api(delta)
+  def to_api(%DeltaRetrievalCallDelta{} = delta), do: DeltaRetrievalCallDelta.to_api(delta)
+  def to_api(%DeltaRetrievalResultDelta{} = delta), do: DeltaRetrievalResultDelta.to_api(delta)
+  def to_api(%DeltaFileSearchCallDelta{} = delta), do: DeltaFileSearchCallDelta.to_api(delta)
 end

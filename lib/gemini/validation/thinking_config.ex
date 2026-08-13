@@ -35,6 +35,12 @@ defmodule Gemini.Validation.ThinkingConfig do
   @type validation_result :: :ok | {:error, String.t()}
   @type thinking_level :: :unspecified | :minimal | :low | :medium | :high
 
+  # Gemini 3 Pro codes are point-versioned ("gemini-3-pro-preview",
+  # "gemini-3.1-pro-preview", "gemini-3-pro-image-preview"), optionally prefixed
+  # with the "models/" resource path. Matching the whole family keeps the
+  # Flash-only levels from slipping through on newer Pro releases.
+  @gemini_3_pro_pattern ~r{(^|/)gemini-3(\.\d+)?-pro(-|$)}
+
   @doc """
   Validate thinking level for Gemini 3 models.
 
@@ -53,6 +59,9 @@ defmodule Gemini.Validation.ThinkingConfig do
 
       iex> Gemini.Validation.ThinkingConfig.validate_level(:medium, "gemini-3.1-pro-preview")
       {:error, "Thinking level :medium is only supported on Gemini 3 Flash models"}
+
+      iex> Gemini.Validation.ThinkingConfig.validate_level(:medium, "gemini-3.6-flash")
+      :ok
   """
   @spec validate_level(thinking_level(), String.t() | nil) :: validation_result()
   def validate_level(level, model \\ nil)
@@ -61,17 +70,9 @@ defmodule Gemini.Validation.ThinkingConfig do
   def validate_level(:low, _model), do: :ok
   def validate_level(:high, _model), do: :ok
 
-  def validate_level(:minimal, model) do
-    if model && String.contains?(model, "gemini-3-pro") && !String.contains?(model, "flash") do
-      {:error, "Thinking level :minimal is only supported on Gemini 3 Flash models"}
-    else
-      :ok
-    end
-  end
-
-  def validate_level(:medium, model) do
-    if model && String.contains?(model, "gemini-3-pro") && !String.contains?(model, "flash") do
-      {:error, "Thinking level :medium is only supported on Gemini 3 Flash models"}
+  def validate_level(level, model) when level in [:minimal, :medium] do
+    if gemini_3_pro?(model) do
+      {:error, "Thinking level #{inspect(level)} is only supported on Gemini 3 Flash models"}
     else
       :ok
     end
@@ -158,6 +159,13 @@ defmodule Gemini.Validation.ThinkingConfig do
   def validate(_config, _model), do: :ok
 
   # Private validation functions for each model type
+
+  @spec gemini_3_pro?(String.t() | nil) :: boolean()
+  defp gemini_3_pro?(model) when is_binary(model) do
+    Regex.match?(@gemini_3_pro_pattern, model)
+  end
+
+  defp gemini_3_pro?(_model), do: false
 
   defp validate_pro_budget(0) do
     {:error, "Gemini 2.5 Pro cannot disable thinking (minimum budget: 128)"}

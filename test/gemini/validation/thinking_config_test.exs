@@ -35,6 +35,59 @@ defmodule Gemini.Validation.ThinkingConfigTest do
     test "accepts unspecified level" do
       assert :ok = ThinkingConfig.validate_level(:unspecified, @flash_3)
     end
+
+    test "rejects minimal/medium for point-versioned Gemini 3 Pro codes" do
+      # The registry ships versioned Pro codes (gemini-3.1-pro-preview), so a
+      # bare "gemini-3-pro" substring check silently lets Flash-only levels
+      # through on Pro models.
+      for model <- [
+            Config.get_model(:pro_3_1_preview),
+            Config.get_model(:pro_3_1_preview_customtools),
+            Config.get_model(:pro_3_image_preview),
+            "models/gemini-3.1-pro-preview"
+          ] do
+        assert {:error, msg} = ThinkingConfig.validate_level(:minimal, model),
+               "expected :minimal to be rejected for #{model}"
+
+        assert msg =~ "only supported on Gemini 3 Flash"
+
+        assert {:error, msg} = ThinkingConfig.validate_level(:medium, model),
+               "expected :medium to be rejected for #{model}"
+
+        assert msg =~ "only supported on Gemini 3 Flash"
+      end
+    end
+
+    test "accepts minimal/medium for point-versioned Gemini 3 Flash codes" do
+      for model <- [
+            Config.get_model(:flash_3_6),
+            Config.get_model(:flash_3_5),
+            Config.get_model(:flash_3_1_lite_preview),
+            "models/gemini-3.1-flash-lite"
+          ] do
+        assert :ok = ThinkingConfig.validate_level(:minimal, model),
+               "expected :minimal to be accepted for #{model}"
+
+        assert :ok = ThinkingConfig.validate_level(:medium, model),
+               "expected :medium to be accepted for #{model}"
+      end
+    end
+
+    test "leaves non-Gemini-3 models to the API" do
+      assert :ok = ThinkingConfig.validate_level(:medium, @pro_2_5)
+      assert :ok = ThinkingConfig.validate_level(:minimal, @pro_2_5)
+      assert :ok = ThinkingConfig.validate_level(:medium, nil)
+    end
+
+    test "validate/2 propagates the Pro level restriction" do
+      assert {:error, msg} =
+               ThinkingConfig.validate(
+                 %{thinking_level: :medium},
+                 Config.get_model(:pro_3_1_preview)
+               )
+
+      assert msg =~ "only supported on Gemini 3 Flash"
+    end
   end
 
   describe "validate_budget/2 for Gemini 2.5 Pro" do

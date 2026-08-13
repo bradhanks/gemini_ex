@@ -24,6 +24,7 @@ defmodule Gemini.APIs.Interactions do
     GenerationConfig,
     Input,
     Interaction,
+    ResponseFormat,
     Tool
   }
 
@@ -48,7 +49,29 @@ defmodule Gemini.APIs.Interactions do
   ## Streaming
 
   - `stream: true` returns `{:ok, stream}` where `stream` yields `InteractionSSEEvent` variants.
-  - Stream ends when the server sends `[DONE]` (independent of `interaction.complete`).
+  - Stream ends when the server sends `[DONE]` (independent of `interaction.completed`).
+
+  ## Options
+
+  - `:model` or `:agent` — one is required
+  - `:system_instruction` — string
+  - `:tools` — list of tool structs or maps
+  - `:generation_config` — `Gemini.Types.Interactions.GenerationConfig` or map
+  - `:agent_config` — map, when using `:agent`
+  - `:response_format` — a `Gemini.Types.Interactions.ResponseFormat` variant,
+    a raw map, or a list of either
+  - `:response_mime_type` — string
+  - `:response_modalities` — list of modality strings
+  - `:previous_interaction_id` — string, to continue a stored interaction
+  - `:store` — boolean; when `false`, thought signatures must be resent
+  - `:background` — boolean, to run asynchronously
+  - `:stream` — boolean
+  - `:safety_settings` — list of safety setting maps
+  - `:service_tier` — string
+  - `:environment` — string or environment config map
+  - `:labels` — map of string keys to string values
+  - `:webhook_config` — map
+  - `:user_metadata` — map
   """
   @spec create(Input.t(), keyword()) ::
           result(Interaction.t() | Enumerable.t())
@@ -188,17 +211,14 @@ defmodule Gemini.APIs.Interactions do
       model: Keyword.get(opts, :model),
       agent: Keyword.get(opts, :agent),
       generation_config: Keyword.get(opts, :generation_config),
-      agent_config: Keyword.get(opts, :agent_config),
-      response_format: Keyword.get(opts, :response_format),
-      response_mime_type: Keyword.get(opts, :response_mime_type)
+      agent_config: Keyword.get(opts, :agent_config)
     }
 
     validators = [
       &validate_model_or_agent/1,
       &validate_model_agent_exclusive/1,
       &validate_model_config_pairing/1,
-      &validate_agent_config_pairing/1,
-      &validate_response_format/1
+      &validate_agent_config_pairing/1
     ]
 
     case Enum.find_value(validators, fn validator -> validator.(validation_ctx) end) do
@@ -330,15 +350,21 @@ defmodule Gemini.APIs.Interactions do
       |> maybe_put("model", model)
       |> maybe_put("agent", agent)
       |> maybe_put("background", Keyword.get(opts, :background))
+      |> maybe_put("environment", Keyword.get(opts, :environment))
       |> maybe_put("generation_config", generation_config)
       |> maybe_put("agent_config", agent_config)
+      |> maybe_put("labels", Keyword.get(opts, :labels))
       |> maybe_put("previous_interaction_id", Keyword.get(opts, :previous_interaction_id))
-      |> maybe_put("response_format", Keyword.get(opts, :response_format))
+      |> maybe_put("response_format", ResponseFormat.to_api(Keyword.get(opts, :response_format)))
       |> maybe_put("response_mime_type", Keyword.get(opts, :response_mime_type))
       |> maybe_put("response_modalities", Keyword.get(opts, :response_modalities))
+      |> maybe_put("safety_settings", Keyword.get(opts, :safety_settings))
+      |> maybe_put("service_tier", Keyword.get(opts, :service_tier))
       |> maybe_put("store", Keyword.get(opts, :store))
       |> maybe_put("system_instruction", Keyword.get(opts, :system_instruction))
       |> maybe_put("tools", tools)
+      |> maybe_put("user_metadata", Keyword.get(opts, :user_metadata))
+      |> maybe_put("webhook_config", Keyword.get(opts, :webhook_config))
 
     body = maybe_put_stream(body, stream?)
 
@@ -556,16 +582,6 @@ defmodule Gemini.APIs.Interactions do
   end
 
   defp validate_agent_config_pairing(_ctx), do: nil
-
-  defp validate_response_format(%{response_format: response_format, response_mime_type: nil})
-       when not is_nil(response_format) do
-    {:error,
-     Error.validation_error(
-       "Invalid request: :response_mime_type is required when :response_format is set"
-     )}
-  end
-
-  defp validate_response_format(_ctx), do: nil
 
   defp normalize_generation_config(nil), do: nil
   defp normalize_generation_config(%GenerationConfig{} = cfg), do: GenerationConfig.to_api(cfg)

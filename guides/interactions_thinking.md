@@ -51,10 +51,11 @@ IO.puts(answer)
 
 ## Stateless conversations and signature safety
 
-With `store: false`, your application owns the complete history. You must
-resend every model-generated step on each later turn. Every thought signature,
-including signatures on built-in tool call and result steps, must be resent
-byte-identically: do not trim, decode, rewrite, or omit it.
+With `store: false`, your application owns the complete history. On each later
+turn, resend the complete prior step history returned by the API, including the
+original `user_input` step as returned and every model-generated step. Every
+thought signature, including signatures on built-in tool call and result steps,
+must be resent byte-identically: do not trim, decode, rewrite, or omit it.
 
 `Interaction.thought_signatures/1` collects every signature in step order for
 inspection or persistence checks. The strings alone are not a replacement for
@@ -79,8 +80,7 @@ history = [
 IO.inspect(Interaction.thought_signatures(first), label: "signatures to preserve")
 
 history =
-  history ++
-    Enum.map(first.steps || [], &Step.to_api/1) ++
+  Enum.map(first.steps || [], &Step.to_api/1) ++
     [
       %{
         "type" => "user_input",
@@ -104,6 +104,8 @@ retained. `Step.to_api/1` returns that map precisely, so unmodeled fields and
 their signatures survive the round trip:
 
 ```elixir
+alias Gemini.Types.Interactions.Step
+
 raw = %{"type" => "future_tool_result", "signature" => "opaque-bytes", "new" => true}
 
 true = raw == raw |> Step.from_api() |> Step.to_api()

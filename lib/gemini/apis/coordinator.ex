@@ -1263,62 +1263,19 @@ defmodule Gemini.APIs.Coordinator do
   # Helper function to format Part structs for API requests
   # Format part for API, handling Gemini.Types.Part structs and maps
   defp format_part(%Part{} = part) do
-    base = %{}
-
-    base =
-      if part.text do
-        Map.put(base, :text, part.text)
-      else
-        base
-      end
-
-    base =
-      if part.inline_data do
-        Map.put(base, :inlineData, %{
-          mimeType: part.inline_data.mime_type,
-          data: part.inline_data.data
-        })
-      else
-        base
-      end
-
-    base =
-      if part.file_data do
-        Map.put(base, :fileData, FileData.to_api(part.file_data))
-      else
-        base
-      end
-
-    base =
-      if part.function_response do
-        Map.put(base, :functionResponse, FunctionResponse.to_api(part.function_response))
-      else
-        base
-      end
-
-    # Include thought_signature for Gemini 3 context preservation
-    base =
-      if part.thought_signature do
-        Map.put(base, :thoughtSignature, part.thought_signature)
-      else
-        base
-      end
-
-    # Include media_resolution for Gemini 3 vision processing
-    base =
-      case media_resolution_to_api(part.media_resolution) do
-        nil -> base
-        level_str -> Map.put(base, :mediaResolution, level_str)
-      end
-
-    base =
-      if is_nil(part.thought) do
-        base
-      else
-        Map.put(base, :thought, part.thought)
-      end
-
-    base
+    %{}
+    |> put_unless_nil(:text, part.text)
+    |> put_unless_nil(:inlineData, format_inline_data(part.inline_data))
+    |> put_unless_nil(:fileData, format_file_data(part.file_data))
+    # A model turn replayed from a parsed response carries its function call
+    # here; without this the part serializes empty and the API sees a model turn
+    # that never requested the tool.
+    |> put_unless_nil(:functionCall, format_function_call(part.function_call))
+    |> put_unless_nil(:functionResponse, format_function_response(part.function_response))
+    # thought_signature and media_resolution preserve Gemini 3 context/vision settings
+    |> put_unless_nil(:thoughtSignature, part.thought_signature)
+    |> put_unless_nil(:mediaResolution, media_resolution_to_api(part.media_resolution))
+    |> put_unless_nil(:thought, part.thought)
   end
 
   defp format_part(%{text: text} = part) when is_binary(text) do
@@ -1336,7 +1293,60 @@ defmodule Gemini.APIs.Coordinator do
     %{inlineData: %{mimeType: mime_type, data: data}}
   end
 
+  # `Gemini.Chat.add_turn/3` builds model turns as snake_case maps; the wire
+  # field is `functionCall`.
+  defp format_part(%{function_call: call} = part) when is_map(call) do
+    case format_function_call(call) do
+      nil -> Map.delete(part, :function_call)
+      function_call -> part |> Map.delete(:function_call) |> Map.put(:functionCall, function_call)
+    end
+  end
+
+  defp format_part(%{"function_call" => call} = part) when is_map(call) do
+    case format_function_call(call) do
+      nil ->
+        Map.delete(part, "function_call")
+
+      function_call ->
+        part |> Map.delete("function_call") |> Map.put(:functionCall, function_call)
+    end
+  end
+
   defp format_part(part), do: part
+
+  defp put_unless_nil(map, _key, nil), do: map
+  defp put_unless_nil(map, key, value), do: Map.put(map, key, value)
+
+  defp format_inline_data(nil), do: nil
+
+  defp format_inline_data(%{mime_type: mime_type, data: data}) do
+    %{mimeType: mime_type, data: data}
+  end
+
+  defp format_file_data(nil), do: nil
+  defp format_file_data(file_data), do: FileData.to_api(file_data)
+
+  defp format_function_response(nil), do: nil
+  defp format_function_response(response), do: FunctionResponse.to_api(response)
+
+  # Normalize a function call from any of the shapes that reach the request
+  # builder (ADM struct, atom-keyed map, string-keyed map) to API format.
+  defp format_function_call(nil), do: nil
+
+  defp format_function_call(%Altar.ADM.FunctionCall{name: name, args: args})
+       when is_binary(name) do
+    %{name: name, args: args || %{}}
+  end
+
+  defp format_function_call(%{name: name} = call) when is_binary(name) do
+    %{name: name, args: Map.get(call, :args) || %{}}
+  end
+
+  defp format_function_call(%{"name" => name} = call) when is_binary(name) do
+    %{name: name, args: Map.get(call, "args") || %{}}
+  end
+
+  defp format_function_call(_), do: nil
 
   defp media_resolution_to_api(%PartMediaResolution{level: level}),
     do: media_resolution_to_api(level)

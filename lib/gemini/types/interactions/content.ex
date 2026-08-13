@@ -178,11 +178,17 @@ defmodule Gemini.Types.Interactions.DocumentContent do
   ## Supported MIME Types
 
   - `"application/pdf"` - PDF documents
+
+  `resolution` accepts the documented values `"unspecified"`, `"low"`,
+  `"medium"`, `"high"`, and `"ultra_high"`, as well as forward-compatible
+  string values.
   """
 
   use TypedStruct
 
   import Gemini.Utils.MapHelpers, only: [maybe_put: 3]
+
+  @type resolution :: :unspecified | :low | :medium | :high | :ultra_high | String.t()
 
   @derive Jason.Encoder
   typedstruct enforce: true do
@@ -190,6 +196,7 @@ defmodule Gemini.Types.Interactions.DocumentContent do
     field(:data, String.t(), enforce: false)
     field(:uri, String.t(), enforce: false)
     field(:mime_type, String.t(), enforce: false)
+    field(:resolution, resolution(), enforce: false)
   end
 
   @spec from_api(map() | nil) :: t() | nil
@@ -201,7 +208,8 @@ defmodule Gemini.Types.Interactions.DocumentContent do
       type: Map.get(data, "type") || "document",
       data: Map.get(data, "data"),
       uri: Map.get(data, "uri"),
-      mime_type: Map.get(data, "mime_type")
+      mime_type: Map.get(data, "mime_type"),
+      resolution: Map.get(data, "resolution")
     }
   end
 
@@ -214,6 +222,7 @@ defmodule Gemini.Types.Interactions.DocumentContent do
     |> maybe_put("data", content.data)
     |> maybe_put("uri", content.uri)
     |> maybe_put("mime_type", content.mime_type)
+    |> maybe_put("resolution", content.resolution)
   end
 end
 

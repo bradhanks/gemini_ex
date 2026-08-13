@@ -144,6 +144,45 @@ defmodule Gemini.Types.Interactions.SpeechConfig do
   end
 end
 
+defmodule Gemini.Types.Interactions.VideoConfig do
+  @moduledoc """
+  Video generation config for Gemini Omni.
+
+  <https://ai.google.dev/gemini-api/docs/omni>
+  """
+
+  use TypedStruct
+
+  import Gemini.Utils.MapHelpers, only: [maybe_put: 3]
+
+  @tasks ~w(text_to_video image_to_video reference_to_video edit)
+
+  @derive Jason.Encoder
+  typedstruct do
+    field(:task, String.t())
+  end
+
+  @doc """
+  Documented tasks: #{Enum.join(@tasks, ", ")}.
+  """
+  @spec tasks() :: [String.t()]
+  def tasks, do: @tasks
+
+  @spec from_api(map() | nil) :: t() | nil
+  def from_api(nil), do: nil
+  def from_api(%__MODULE__{} = config), do: config
+  def from_api(%{} = data), do: %__MODULE__{task: Map.get(data, "task")}
+
+  @spec to_api(t() | map() | nil) :: map() | nil
+  def to_api(nil), do: nil
+  def to_api(%{} = map) when not is_struct(map), do: map
+
+  def to_api(%__MODULE__{} = config) do
+    %{}
+    |> maybe_put("task", config.task)
+  end
+end
+
 defmodule Gemini.Types.Interactions.GenerationConfig do
   @moduledoc """
   Interactions GenerationConfig (snake_case keys).
@@ -153,7 +192,13 @@ defmodule Gemini.Types.Interactions.GenerationConfig do
 
   import Gemini.Utils.MapHelpers, only: [maybe_put: 3]
 
-  alias Gemini.Types.Interactions.{ImageConfig, SpeechConfig, ThinkingLevel, ToolChoice}
+  alias Gemini.Types.Interactions.{
+    ImageConfig,
+    SpeechConfig,
+    ThinkingLevel,
+    ToolChoice,
+    VideoConfig
+  }
 
   @type thinking_summaries :: String.t()
 
@@ -168,6 +213,7 @@ defmodule Gemini.Types.Interactions.GenerationConfig do
     field(:thinking_level, ThinkingLevel.t())
     field(:thinking_summaries, thinking_summaries())
     field(:tool_choice, ToolChoice.t())
+    field(:video_config, VideoConfig.t())
     field(:top_p, float())
   end
 
@@ -186,6 +232,7 @@ defmodule Gemini.Types.Interactions.GenerationConfig do
       thinking_level: Map.get(data, "thinking_level"),
       thinking_summaries: Map.get(data, "thinking_summaries"),
       tool_choice: ToolChoice.from_api(Map.get(data, "tool_choice")),
+      video_config: VideoConfig.from_api(Map.get(data, "video_config")),
       top_p: Map.get(data, "top_p")
     }
   end
@@ -205,6 +252,7 @@ defmodule Gemini.Types.Interactions.GenerationConfig do
     |> maybe_put("thinking_level", config.thinking_level)
     |> maybe_put("thinking_summaries", config.thinking_summaries)
     |> maybe_put("tool_choice", ToolChoice.to_api(config.tool_choice))
+    |> maybe_put("video_config", VideoConfig.to_api(config.video_config))
     |> maybe_put("top_p", config.top_p)
   end
 

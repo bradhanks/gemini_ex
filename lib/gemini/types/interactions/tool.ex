@@ -81,25 +81,53 @@ end
 
 defmodule Gemini.Types.Interactions.GoogleSearch do
   @moduledoc """
-  `google_search` tool declaration.
+  Built-in Google Search tool.
+
+  `search_types` narrows what is searched. Documented values are
+  `"web_search"` and `"image_search"`; image search is available on
+  `gemini-3.1-flash-image`. When unset, the tool serializes to
+  `%{"type" => "google_search"}` and the server picks the default.
+
+  <https://ai.google.dev/gemini-api/docs/image-generation>
   """
 
   use TypedStruct
 
+  import Gemini.Utils.MapHelpers, only: [maybe_put: 3]
+
+  @search_types ~w(web_search image_search)
+
   @derive Jason.Encoder
-  typedstruct enforce: true do
-    field(:type, String.t(), enforce: true, default: "google_search")
+  typedstruct do
+    field(:type, String.t(), default: "google_search")
+    field(:search_types, [String.t()], enforce: false)
   end
+
+  @doc """
+  Documented search types: #{Enum.join(@search_types, ", ")}.
+  """
+  @spec search_types() :: [String.t()]
+  def search_types, do: @search_types
 
   @spec from_api(map() | nil) :: t() | nil
   def from_api(nil), do: nil
   def from_api(%__MODULE__{} = tool), do: tool
-  def from_api(%{} = data), do: %__MODULE__{type: Map.get(data, "type") || "google_search"}
+
+  def from_api(%{} = data) do
+    %__MODULE__{
+      type: Map.get(data, "type") || "google_search",
+      search_types: Map.get(data, "search_types")
+    }
+  end
 
   @spec to_api(t() | map() | nil) :: map() | nil
   def to_api(nil), do: nil
   def to_api(%{} = map) when not is_struct(map), do: map
-  def to_api(%__MODULE__{}), do: %{"type" => "google_search"}
+
+  def to_api(%__MODULE__{} = tool) do
+    %{"type" => "google_search"}
+    |> maybe_put("search_types", tool.search_types)
+  end
 end
 
 defmodule Gemini.Types.Interactions.CodeExecution do

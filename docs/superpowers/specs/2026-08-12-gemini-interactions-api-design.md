@@ -327,3 +327,65 @@ deprecation cycle, since the alias means "latest" by definition.
 **Two representations coexist.** `outputs` alongside `steps`, and `content.*`
 events alongside `step.*`, is redundancy that a future major version should
 remove. Accepted deliberately to avoid breaking 0.16.0 callers.
+
+## Amendments
+
+Added after the design was approved, from the formal API reference at
+`https://ai.google.dev/api/interactions-api` and
+`https://ai.google.dev/gemini-api/docs/interactions/media-resolution`, which
+were not found during the first research pass. These supersede the sections
+they name.
+
+**A1 — supersedes §7 on `media_resolution`.** The field is named `resolution`,
+not `media_resolution`, and its values are `unspecified`, `low`, `medium`,
+`high`, `ultra_high` (`ultra_high` per-content-item only, Gemini 3 only). It
+already exists and is correct on `ImageContent` (`content.ex:94-128`) and
+`VideoContent` (`content.ex:229-263`). The only work is adding it to
+`DocumentContent`, which the document-processing page documents as accepting
+per-part resolution. `AudioContent` is left alone — no source documents
+resolution on audio.
+
+**A2 — supersedes §4 on output accessors.** `output_text`, `output_image`,
+`output_audio`, and `output_video` are fields the server actually returns on the
+Interaction resource, not client-side conveniences. They are parsed as struct
+fields. The accessor functions remain, returning the parsed field when present
+and computing from `steps` when absent.
+
+**A3 — extends §1 on the step schema.** A step is `{type, content, name, id}`,
+plus `arguments` on `function_call` and `call_id` (not `id`) linking
+`function_result` to its call. The full step type list adds `code_execution`
+(the reference's name; `code_execution_call` is not in it), `google_maps_call`,
+`google_maps_result`, `retrieval_call`, `retrieval_result`, and `computer_use`.
+The permissive fallback for unrecognized types is unchanged and now also covers
+any of these the implementation does not model explicitly.
+
+**A4 — corrects §5 on event names.** The current event names are wrong, not
+merely incomplete: the code dispatches `interaction.start` and
+`interaction.complete` (`events.ex:338-339`), but the API emits
+`interaction.created` and `interaction.completed`. Both spellings are accepted
+on parse. The full event set is `interaction.created`,
+`interaction.status_update`, `step.start`, `step.delta`, `step.stop`,
+`interaction.completed`, `error`.
+
+`Delta` is already near-complete. Missing variants to add:
+`text_annotation_delta`, `arguments_delta`, `google_maps_call`,
+`google_maps_result`, `retrieval_call`, `retrieval_result`, `file_search_call`.
+
+**A5 — extends §6 on `response_format`.** The reference documents
+`{"type": "json_schema", "json_schema": {name, schema, strict}}` and
+`{"type": "json_object"}`, which conflicts with the capability pages'
+`{"type": "text"|"image"|"audio"|"video", ...}`. Both shapes are supported:
+typed constructors for all six, and raw maps continue to pass through. The
+conflict is noted in the module doc with both source URLs. `response_format`
+also accepts a list, per the reference's `ResponseFormat|array`.
+
+**A6 — new request and resource fields.** `build_create_body/3` does not emit
+`safety_settings`, `service_tier`, `environment`, `labels`, `webhook_config`, or
+`user_metadata`. All six are added. The `Interaction` struct additionally gains
+`object`, `input`, `system_instruction`, `tools`, `response_format`, and
+`generation_config`, which the resource returns but the struct drops.
+
+The documented `status` values are `in_progress`, `requires_action`,
+`completed`, `failed`, `cancelled`, `incomplete`, `budget_exceeded`, `queued`.
+`status` stays a plain string — no enum validation — so a new server-side status
+does not break parsing.

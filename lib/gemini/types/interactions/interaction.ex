@@ -2,14 +2,32 @@ defmodule Gemini.Types.Interactions.Interaction do
   @moduledoc """
   Interactions `Interaction` resource.
 
-  JSON keys are snake_case, matching the Python SDK and Interactions API.
+  JSON keys are snake_case, matching the Interactions API.
+
+  `steps` is the authoritative record of a turn. `outputs` is retained for
+  backward compatibility and is derived by flattening each step's content in
+  order when the response carries `steps`.
+
+  Documented `status` values are `in_progress`, `requires_action`, `completed`,
+  `failed`, `cancelled`, `incomplete`, `budget_exceeded`, and `queued`. The
+  field stays a plain string so a new server-side status does not break parsing.
+
+  Reference: <https://ai.google.dev/api/interactions-api>
   """
 
   use TypedStruct
 
   import Gemini.Utils.MapHelpers, only: [maybe_put: 3]
 
-  alias Gemini.Types.Interactions.{Content, Usage}
+  alias Gemini.Types.Interactions.{
+    AudioContent,
+    Content,
+    ImageContent,
+    Step,
+    TextContent,
+    Usage,
+    VideoContent
+  }
 
   @type status :: String.t()
 
@@ -17,14 +35,33 @@ defmodule Gemini.Types.Interactions.Interaction do
   typedstruct enforce: true do
     field(:id, String.t())
     field(:status, status())
+    field(:object, String.t(), enforce: false)
     field(:agent, String.t(), enforce: false)
+    field(:agent_config, map(), enforce: false)
     field(:created, DateTime.t(), enforce: false)
+    field(:environment, term(), enforce: false)
+    field(:environment_id, String.t(), enforce: false)
+    field(:generation_config, map(), enforce: false)
+    field(:input, term(), enforce: false)
+    field(:labels, map(), enforce: false)
     field(:model, String.t(), enforce: false)
+    field(:output_audio, AudioContent.t(), enforce: false)
+    field(:output_image, ImageContent.t(), enforce: false)
+    field(:output_text, String.t(), enforce: false)
+    field(:output_video, VideoContent.t(), enforce: false)
     field(:outputs, [Content.t()], enforce: false)
     field(:previous_interaction_id, String.t(), enforce: false)
+    field(:response_format, term(), enforce: false)
     field(:role, String.t(), enforce: false)
+    field(:safety_settings, list(), enforce: false)
+    field(:service_tier, String.t(), enforce: false)
+    field(:steps, [Step.t()], enforce: false)
+    field(:system_instruction, String.t(), enforce: false)
+    field(:tools, list(), enforce: false)
     field(:updated, DateTime.t(), enforce: false)
     field(:usage, Usage.t(), enforce: false)
+    field(:user_metadata, map(), enforce: false)
+    field(:webhook_config, map(), enforce: false)
   end
 
   @spec from_api(map() | nil) :: t() | nil
@@ -32,17 +69,38 @@ defmodule Gemini.Types.Interactions.Interaction do
   def from_api(%__MODULE__{} = interaction), do: interaction
 
   def from_api(%{} = data) do
+    steps = map_list(Map.get(data, "steps"), &Step.from_api/1)
+
     %__MODULE__{
       id: Map.get(data, "id"),
       status: Map.get(data, "status"),
+      object: Map.get(data, "object"),
       agent: Map.get(data, "agent"),
+      agent_config: Map.get(data, "agent_config"),
       created: parse_datetime(Map.get(data, "created")),
+      environment: Map.get(data, "environment"),
+      environment_id: Map.get(data, "environment_id"),
+      generation_config: Map.get(data, "generation_config"),
+      input: Map.get(data, "input"),
+      labels: Map.get(data, "labels"),
       model: Map.get(data, "model"),
-      outputs: map_list(Map.get(data, "outputs"), &Content.from_api/1),
+      output_audio: Content.from_api(Map.get(data, "output_audio")),
+      output_image: Content.from_api(Map.get(data, "output_image")),
+      output_text: Map.get(data, "output_text"),
+      output_video: Content.from_api(Map.get(data, "output_video")),
+      outputs: parse_outputs(Map.get(data, "outputs"), steps),
       previous_interaction_id: Map.get(data, "previous_interaction_id"),
+      response_format: Map.get(data, "response_format"),
       role: Map.get(data, "role"),
+      safety_settings: Map.get(data, "safety_settings"),
+      service_tier: Map.get(data, "service_tier"),
+      steps: steps,
+      system_instruction: Map.get(data, "system_instruction"),
+      tools: Map.get(data, "tools"),
       updated: parse_datetime(Map.get(data, "updated")),
-      usage: Usage.from_api(Map.get(data, "usage"))
+      usage: Usage.from_api(Map.get(data, "usage")),
+      user_metadata: Map.get(data, "user_metadata"),
+      webhook_config: Map.get(data, "webhook_config")
     }
   end
 
@@ -54,15 +112,145 @@ defmodule Gemini.Types.Interactions.Interaction do
     %{}
     |> maybe_put("id", interaction.id)
     |> maybe_put("status", interaction.status)
+    |> maybe_put("object", interaction.object)
     |> maybe_put("agent", interaction.agent)
+    |> maybe_put("agent_config", interaction.agent_config)
     |> maybe_put("created", datetime_to_iso8601(interaction.created))
+    |> maybe_put("environment", interaction.environment)
+    |> maybe_put("environment_id", interaction.environment_id)
+    |> maybe_put("generation_config", interaction.generation_config)
+    |> maybe_put("input", interaction.input)
+    |> maybe_put("labels", interaction.labels)
     |> maybe_put("model", interaction.model)
+    |> maybe_put("output_audio", Content.to_api(interaction.output_audio))
+    |> maybe_put("output_image", Content.to_api(interaction.output_image))
+    |> maybe_put("output_text", interaction.output_text)
+    |> maybe_put("output_video", Content.to_api(interaction.output_video))
     |> maybe_put("outputs", map_list(interaction.outputs, &Content.to_api/1))
     |> maybe_put("previous_interaction_id", interaction.previous_interaction_id)
+    |> maybe_put("response_format", interaction.response_format)
     |> maybe_put("role", interaction.role)
+    |> maybe_put("safety_settings", interaction.safety_settings)
+    |> maybe_put("service_tier", interaction.service_tier)
+    |> maybe_put("steps", map_list(interaction.steps, &Step.to_api/1))
+    |> maybe_put("system_instruction", interaction.system_instruction)
+    |> maybe_put("tools", interaction.tools)
     |> maybe_put("updated", datetime_to_iso8601(interaction.updated))
     |> maybe_put("usage", Usage.to_api(interaction.usage))
+    |> maybe_put("user_metadata", interaction.user_metadata)
+    |> maybe_put("webhook_config", interaction.webhook_config)
   end
+
+  @doc """
+  Text output of the interaction.
+
+  Returns the server-provided `output_text` when present, otherwise the
+  concatenated text of the last `model_output` step, otherwise the text in
+  `outputs`.
+  """
+  @spec output_text(t()) :: {:ok, String.t()} | {:error, :not_found}
+  def output_text(%__MODULE__{output_text: text}) when is_binary(text) and text != "",
+    do: {:ok, text}
+
+  def output_text(%__MODULE__{} = interaction) do
+    interaction
+    |> last_model_output_text()
+    |> case do
+      nil -> {:error, :not_found}
+      text -> {:ok, text}
+    end
+  end
+
+  @doc """
+  Last image block produced by the interaction.
+  """
+  @spec output_image(t()) :: {:ok, ImageContent.t()} | {:error, :not_found}
+  def output_image(%__MODULE__{output_image: %ImageContent{} = image}), do: {:ok, image}
+  def output_image(%__MODULE__{} = interaction), do: last_block(interaction, ImageContent)
+
+  @doc """
+  Last audio block produced by the interaction.
+  """
+  @spec output_audio(t()) :: {:ok, AudioContent.t()} | {:error, :not_found}
+  def output_audio(%__MODULE__{output_audio: %AudioContent{} = audio}), do: {:ok, audio}
+  def output_audio(%__MODULE__{} = interaction), do: last_block(interaction, AudioContent)
+
+  @doc """
+  Last video block produced by the interaction.
+  """
+  @spec output_video(t()) :: {:ok, VideoContent.t()} | {:error, :not_found}
+  def output_video(%__MODULE__{output_video: %VideoContent{} = video}), do: {:ok, video}
+  def output_video(%__MODULE__{} = interaction), do: last_block(interaction, VideoContent)
+
+  @doc """
+  Every thought signature in the interaction, in step order.
+
+  In stateless mode (`store: false`) these must be resent byte-identically on
+  the following turn. See <https://ai.google.dev/gemini-api/docs/thinking>.
+  """
+  @spec thought_signatures(t()) :: [String.t()]
+  def thought_signatures(%__MODULE__{steps: nil}), do: []
+
+  def thought_signatures(%__MODULE__{steps: steps}) when is_list(steps) do
+    steps
+    |> Enum.map(&Step.signature/1)
+    |> Enum.filter(&is_binary/1)
+  end
+
+  def thought_signatures(_), do: []
+
+  defp parse_outputs(_outputs, steps) when is_list(steps),
+    do: Enum.flat_map(steps, &Step.content/1)
+
+  defp parse_outputs(nil, nil), do: nil
+  defp parse_outputs(outputs, nil), do: map_list(outputs, &Content.from_api/1)
+
+  defp last_model_output_text(%__MODULE__{steps: steps, outputs: outputs}) when is_list(steps) do
+    steps
+    |> Enum.filter(&(step_type(&1) == "model_output"))
+    |> List.last()
+    |> case do
+      nil -> text_of(outputs)
+      step -> text_of(Step.content(step)) || text_of(outputs)
+    end
+  end
+
+  defp last_model_output_text(%__MODULE__{outputs: outputs}) when is_list(outputs),
+    do: text_of(outputs)
+
+  defp last_model_output_text(_), do: nil
+
+  defp text_of(blocks) when is_list(blocks) do
+    blocks
+    |> Enum.filter(&is_struct(&1, TextContent))
+    |> Enum.map_join("", & &1.text)
+    |> case do
+      "" -> nil
+      text -> text
+    end
+  end
+
+  defp text_of(_), do: nil
+
+  defp step_type(%{type: type}), do: type
+  defp step_type(_), do: nil
+
+  defp last_block(%__MODULE__{} = interaction, module) do
+    interaction
+    |> all_blocks()
+    |> Enum.filter(&is_struct(&1, module))
+    |> List.last()
+    |> case do
+      nil -> {:error, :not_found}
+      block -> {:ok, block}
+    end
+  end
+
+  defp all_blocks(%__MODULE__{steps: steps}) when is_list(steps),
+    do: Enum.flat_map(steps, &Step.content/1)
+
+  defp all_blocks(%__MODULE__{outputs: outputs}) when is_list(outputs), do: outputs
+  defp all_blocks(_), do: []
 
   defp parse_datetime(nil), do: nil
   defp parse_datetime(%DateTime{} = dt), do: dt
@@ -84,6 +272,8 @@ defmodule Gemini.Types.Interactions.Interaction do
   defp map_list(list, fun) when is_list(list) do
     Enum.map(list, fun)
   end
+
+  defp map_list(_, _fun), do: nil
 end
 
 defmodule Gemini.Types.Interactions.Turn do

@@ -144,9 +144,9 @@ defmodule Gemini.Types.Interactions.Interaction do
   @doc """
   Text output of the interaction.
 
-  Returns the server-provided `output_text` when present, otherwise the
-  concatenated text of the last `model_output` step, otherwise the text in
-  `outputs`.
+  Returns the server-provided `output_text` when present. Otherwise, it returns
+  the concatenated text of the last `model_output` step when `steps` are
+  present, or text in legacy `outputs` when `steps` are absent.
   """
   @spec output_text(t()) :: {:ok, String.t()} | {:error, :not_found}
   def output_text(%__MODULE__{output_text: text}) when is_binary(text) and text != "",
@@ -205,13 +205,13 @@ defmodule Gemini.Types.Interactions.Interaction do
   defp parse_outputs(nil, nil), do: nil
   defp parse_outputs(outputs, nil), do: map_list(outputs, &Content.from_api/1)
 
-  defp last_model_output_text(%__MODULE__{steps: steps, outputs: outputs}) when is_list(steps) do
+  defp last_model_output_text(%__MODULE__{steps: steps}) when is_list(steps) do
     steps
     |> Enum.filter(&(step_type(&1) == "model_output"))
     |> List.last()
     |> case do
-      nil -> text_of(outputs)
-      step -> text_of(Step.content(step)) || text_of(outputs)
+      nil -> nil
+      step -> text_of(Step.content(step))
     end
   end
 

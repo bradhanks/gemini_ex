@@ -62,6 +62,17 @@ defmodule Gemini.Types.Interactions.InteractionTest do
       assert Interaction.output_text(Interaction.from_api(steps_response())) == {:ok, "Hello!"}
     end
 
+    test "output_text/1 does not treat user_input step content as output" do
+      interaction =
+        Interaction.from_api(
+          Map.put(steps_response(), "steps", [
+            %{"type" => "user_input", "content" => [%{"type" => "text", "text" => "Hi"}]}
+          ])
+        )
+
+      assert Interaction.output_text(interaction) == {:error, :not_found}
+    end
+
     test "output_text/1 returns :not_found when there is no text anywhere" do
       interaction = Interaction.from_api(%{"id" => "i", "status" => "completed"})
 

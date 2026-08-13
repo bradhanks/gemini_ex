@@ -21,11 +21,11 @@ defmodule Gemini.Types.Request.ListModelsRequest do
 
   ## Examples
 
-      iex> ListModelsRequest.new(page_size: 50)
-      {:ok, %ListModelsRequest{page_size: 50}}
+      iex> Gemini.Types.Request.ListModelsRequest.new(page_size: 50)
+      {:ok, %Gemini.Types.Request.ListModelsRequest{page_size: 50}}
 
-      iex> ListModelsRequest.new(page_size: 2000)
-      {:error, "Page size must be between 1 and 1000"}
+      iex> Gemini.Types.Request.ListModelsRequest.new(page_size: 2000)
+      {:error, "Page size must be between 1 and 1000, got: 2000"}
   """
   @spec new(keyword()) :: {:ok, t()} | {:error, String.t()}
   def new(opts \\ []) do

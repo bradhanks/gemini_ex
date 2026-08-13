@@ -36,11 +36,14 @@ defmodule Gemini.Types.Response.Model do
 
   ## Examples
 
-      iex> Model.supports_method?(model, "generateContent")
-      true
+  Models come back from `Gemini.list_models/1`; every field is populated by the
+  response parser, so they are read, not built, by callers.
 
-      iex> Model.supports_method?(model, "nonexistentMethod")
-      false
+      Model.supports_method?(model, "generateContent")
+      #=> true
+
+      Model.supports_method?(model, "nonexistentMethod")
+      #=> false
   """
   @spec supports_method?(t(), String.t()) :: boolean()
   def supports_method?(%__MODULE__{supported_generation_methods: methods}, method) do
@@ -88,11 +91,13 @@ defmodule Gemini.Types.Response.Model do
 
   ## Examples
 
-      iex> Model.effective_base_id(%Model{base_model_id: "gemini-flash-lite-latest"})
-      "gemini-flash-lite-latest"
+      # base_model_id: "gemini-flash-lite-latest"
+      Model.effective_base_id(model)
+      #=> "gemini-flash-lite-latest"
 
-      iex> Model.effective_base_id(%Model{name: "models/gemini-2.5-pro", base_model_id: nil})
-      "gemini-2.5-pro"
+      # name: "models/gemini-2.5-pro", base_model_id: nil
+      Model.effective_base_id(model)
+      #=> "gemini-2.5-pro"
   """
   @spec effective_base_id(t()) :: String.t()
   def effective_base_id(%__MODULE__{base_model_id: base_id}) when is_binary(base_id) do
@@ -122,11 +127,13 @@ defmodule Gemini.Types.Response.Model do
 
   ## Examples
 
-      iex> Model.input_capacity_tier(%Model{input_token_limit: 2_000_000})
-      :very_large
+      # input_token_limit: 2_000_000
+      Model.input_capacity_tier(model)
+      #=> :very_large
 
-      iex> Model.input_capacity_tier(%Model{input_token_limit: 30_000})
-      :medium
+      # input_token_limit: 30_000
+      Model.input_capacity_tier(model)
+      #=> :medium
   """
   @spec input_capacity_tier(t()) :: capacity_tier()
   def input_capacity_tier(%__MODULE__{input_token_limit: limit}) do
@@ -228,11 +235,13 @@ defmodule Gemini.Types.Response.Model do
 
   ## Examples
 
-      iex> Model.model_family(%Model{base_model_id: "gemini-flash-lite-latest"})
-      "gemini"
+      # base_model_id: "gemini-flash-lite-latest"
+      Model.model_family(model)
+      #=> "gemini"
 
-      iex> Model.model_family(%Model{base_model_id: "gemini-embedding-001"})
-      "gemini-embedding"
+      # base_model_id: "gemini-embedding-001"
+      Model.model_family(model)
+      #=> "gemini-embedding"
   """
   @spec model_family(t()) :: String.t()
   def model_family(%__MODULE__{} = model) do

@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed model turns losing their function call during request serialization.
+  `%Gemini.Types.Part{function_call: ...}` — the shape `Part.from_api/1` returns,
+  so the shape callers replay in a manual tool loop — serialized to an empty
+  part, and the snake_case `%{function_call: ...}` maps built by
+  `Gemini.Chat.add_turn/3` for a `"model"` turn reached the wire un-normalized.
+  Both now emit the `functionCall` field.
+- Fixed `Gemini.Validation.ThinkingConfig.validate_level/2` accepting the
+  Flash-only `:minimal` and `:medium` thinking levels on Gemini 3 Pro models. The
+  Pro check matched only the literal `gemini-3-pro`, so point-versioned codes
+  such as `gemini-3.1-pro-preview` bypassed validation entirely.
+- Fixed `Gemini.Utils.MapHelpers.build_paginated_path/2` emitting query
+  parameters in reverse of the documented `pageSize`/`pageToken`/`filter` order.
+
+### Changed
+
+- Corrected doc examples that did not match runtime behavior or could not run at
+  all (`Gemini.Types.Content.from_tool_results/1` key casing,
+  `Gemini.Types.Request.ListModelsRequest.new/1` error text, unqualified calls in
+  `Gemini.SSE.Parser` / `Gemini.Types.Generation.Image` / `Video`, and
+  un-constructible `Gemini.Types.Response.Model` structs). The runnable examples
+  are now executed by the test suite via `Gemini.DoctestTest`.
+
 ## [0.17.0] - 2026-08-12
 
 ### Added

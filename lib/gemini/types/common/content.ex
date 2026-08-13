@@ -73,7 +73,9 @@ defmodule Gemini.Types.Content do
       iex> Gemini.Types.Content.from_tool_results(results)
       %Gemini.Types.Content{
         role: "tool",
-        parts: [%{functionResponse: %{name: "call_123", response: %{content: "result"}}}]
+        parts: [
+          %{"functionResponse" => %{"name" => "call_123", "response" => %{"content" => "result"}}}
+        ]
       }
 
   """

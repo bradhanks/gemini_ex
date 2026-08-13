@@ -181,7 +181,7 @@ defmodule Gemini.Types.Generation.Video do
 
   ## Examples
 
-      iex> format_compression_format(:h264)
+      iex> Gemini.Types.Generation.Video.format_compression_format(:h264)
       "h264"
   """
   @spec format_compression_format(compression_format()) :: String.t()

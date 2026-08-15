@@ -24,12 +24,15 @@ IO.puts(description)
 `analyze/3` accepts multiple media items and places them before the prompt:
 
 ```elixir
+{:ok, first} = Gemini.APIs.Files.upload("first.jpg", auth: :gemini)
+{:ok, second} = Gemini.APIs.Files.upload("second.png", auth: :gemini)
+
 {:ok, answer} =
   Gemini.Interactions.Understanding.analyze(
     "Compare these two images",
     [
-      {:image, {:uri, "files/first"}, "image/jpeg"},
-      {:image, {:uri, "files/second"}, "image/png"}
+      {:image, {:uri, first.uri}, "image/jpeg"},
+      {:image, {:uri, second.uri}, "image/png"}
     ],
     model: "gemini-3.6-flash",
     resolution: "medium"
@@ -45,6 +48,20 @@ Each media tuple has the form `{kind, source, mime_type}`. The kind is
 `{:data, base64}`, or a bare URI string. Typed `ImageContent`, `VideoContent`,
 `AudioContent`, and `DocumentContent` structs are also accepted.
 
+A URI must be fully qualified: a Files API URI, a YouTube watch URL, another
+HTTPS URL, or a `gs://` object. For an uploaded file that is the `uri` field,
+which looks like
+`"https://generativelanguage.googleapis.com/v1beta/files/abc123"` — not the
+`name` field, which looks like `"files/abc123"` and is only for `Files.get/2`,
+`Files.delete/2`, and `Files.wait_for_processing/2`. Passing a bare resource
+name into a media block fails with:
+
+```
+400 — Unsupported file URI type: files/abc123. File URI must be a File API
+      (e.g. https://generativelanguage.googleapis.com/files/<id>), Youtube
+      (e.g. https://www.youtube.com/watch?v=<id>), or HTTPS
+```
+
 For a single item, use:
 
 - `describe_image/3`
@@ -56,7 +73,9 @@ For a single item, use:
 
 - `resolution:` is applied independently to every non-audio item. Documented
   values are `"unspecified"`, `"low"`, `"medium"`, `"high"`, and
-  `"ultra_high"`. Resolution is not sent on audio content.
+  `"ultra_high"`. Resolution is not sent on audio content, and the Gemini API
+  currently rejects it on document blocks with
+  `400 Unknown parameter 'resolution'` — use it for images and video only.
 - `mime_type:` is the single-item helper option. With `analyze/3`, place each
   MIME type in its media tuple or content struct.
 - `response_format:` can be a `ResponseFormat.Text` struct with

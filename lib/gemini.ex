@@ -173,6 +173,7 @@ defmodule Gemini do
   alias Gemini.Error
   alias Gemini.Tools
   alias Gemini.Types.Content
+  alias Gemini.Types.Request.GenerateContentRequest
   alias Gemini.Types.Response.GenerateContentResponse
 
   @typedoc """
@@ -325,9 +326,14 @@ defmodule Gemini do
   @doc """
   Count tokens in the given content.
 
+  Accepts a string or a `Gemini.Types.Request.GenerateContentRequest`. A bare
+  content list is not supported here — wrap it in a request struct, or count
+  after the fact from the response's `usage_metadata`.
+
   See `t:Gemini.options/0` for available options.
   """
-  @spec count_tokens(String.t() | [Content.t()], options()) :: {:ok, map()} | {:error, Error.t()}
+  @spec count_tokens(String.t() | GenerateContentRequest.t(), options()) ::
+          {:ok, map()} | {:error, Error.t()}
   def count_tokens(contents, opts \\ []) do
     Coordinator.count_tokens(contents, opts)
   end

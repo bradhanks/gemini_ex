@@ -9,12 +9,18 @@ defmodule Gemini.Interactions.Understanding do
 
   Media is placed before the prompt, matching the documented API examples.
 
+  Media URIs must be fully qualified. For an uploaded file that is the `uri`
+  field, not the `name`: the API rejects a bare resource name such as
+  `"files/abc123"` with `Unsupported file URI type`.
+
   ## Examples
+
+      {:ok, file} = Gemini.APIs.Files.upload("photo.jpg", auth: :gemini)
 
       {:ok, text} =
         Gemini.Interactions.Understanding.analyze(
           "What is in this image?",
-          [{:image, {:uri, "files/abc123"}, "image/jpeg"}],
+          [{:image, {:uri, file.uri}, "image/jpeg"}],
           model: "gemini-3.6-flash"
         )
 
@@ -48,7 +54,7 @@ defmodule Gemini.Interactions.Understanding do
       {:ok, json} =
         Gemini.Interactions.Understanding.analyze(
           "Detect all objects",
-          [{:image, {:uri, "files/abc"}, "image/jpeg"}],
+          [{:image, {:uri, file.uri}, "image/jpeg"}],
           model: "gemini-3.6-flash",
           response_format: %Gemini.Types.Interactions.ResponseFormat.Text{
             mime_type: "application/json",
@@ -91,10 +97,18 @@ defmodule Gemini.Interactions.Understanding do
   Media items may be content structs or `{kind, source, mime_type}` tuples.
   Sources accept `{:uri, uri}`, `{:data, base64}`, or a bare URI string.
 
+  A URI must be fully qualified — a Files API URI
+  (`"https://generativelanguage.googleapis.com/v1beta/files/abc123"`, which is
+  the `uri` field of an uploaded file rather than its `name`), a YouTube watch
+  URL, another HTTPS URL, or a `gs://` object. Passing a bare resource name
+  such as `"files/abc123"` fails with `Unsupported file URI type`.
+
   `:resolution` sets the per-content-item media resolution on every image,
   video, and document block, including caller-supplied structs. It is not sent
   on audio blocks. Resolution values are passed through without local enum
-  validation.
+  validation. Note that the Gemini API currently rejects `resolution` on
+  document blocks (`400 Unknown parameter 'resolution'`), so set it only when
+  the media is images or video.
 
   With `stream: true`, returns `{:ok, stream}` unchanged. The stream yields
   `Gemini.Types.Interactions.Events.InteractionSSEEvent` variants.

@@ -37,3 +37,20 @@ repomix*.xml
 /debug/
 
 .dependency_sources.local.exs
+
+# Credentials. Never commit these.
+.env
+.env.*
+!.env.example
+*.pem
+vertex-*.json
+service-account*.json
+
+# Local iex session setup (loads .env into Gemini.Env).
+.iex.exs
+
+# Tutorial working set: unpublished manuscripts and generated artifacts.
+/tutorial/
+*.docx
+*.pdf
+*.rtf

@@ -162,6 +162,18 @@ defmodule Gemini.Types.Interactions.Interaction do
   end
 
   @doc """
+  Same as `output_text/1`, under a name that cannot be confused with the
+  `:output_text` struct field.
+
+  The field is only what the server chose to set — routinely `nil` even when
+  the interaction produced text, because the text lives in `steps`. This
+  function (like `output_text/1`) falls back to the last `model_output` step.
+  Prefer it in code where the field/function ambiguity could mislead a reader.
+  """
+  @spec output_text_fn(t()) :: {:ok, String.t()} | {:error, :not_found}
+  def output_text_fn(%__MODULE__{} = interaction), do: output_text(interaction)
+
+  @doc """
   Last image block produced by the interaction.
   """
   @spec output_image(t()) :: {:ok, ImageContent.t()} | {:error, :not_found}

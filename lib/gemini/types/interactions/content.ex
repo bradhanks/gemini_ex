@@ -181,7 +181,10 @@ defmodule Gemini.Types.Interactions.DocumentContent do
 
   `resolution` accepts the documented values `"unspecified"`, `"low"`,
   `"medium"`, `"high"`, and `"ultra_high"`, as well as forward-compatible
-  string values.
+  string values. Note that the Gemini API currently rejects `resolution` on
+  document blocks with `400 Unknown parameter 'resolution'` — the field is
+  modeled for protocol completeness, but set it only on image and video
+  content until the API accepts it here.
   """
 
   use TypedStruct

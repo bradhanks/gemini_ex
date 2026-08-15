@@ -15,11 +15,15 @@ defmodule Gemini.Interactions.Image do
 
       File.write!("out.png", Base.decode64!(image.data))
 
-  Editing continues from an uploaded image:
+  Editing continues from an uploaded image. Pass the `uri` field of the uploaded
+  file, not its `name`: the API rejects a bare resource name such as
+  `"files/abc123"` with `Unsupported file URI type`.
+
+      {:ok, file} = Gemini.APIs.Files.upload("banana.jpg", auth: :gemini)
 
       {:ok, edited} =
         Gemini.Interactions.Image.edit("give it a chef's hat",
-          {:uri, "files/abc123", "image/jpeg"},
+          {:uri, file.uri, "image/jpeg"},
           model: "gemini-3.1-flash-image"
         )
 
@@ -90,6 +94,10 @@ defmodule Gemini.Interactions.Image do
   Pass the source image as an `ImageContent` struct, `{:uri, uri, mime_type}`
   tuple, or `{:data, base64, mime_type}` tuple. To continue a stored
   interaction, pass `nil` and a non-empty `previous_interaction_id:`.
+
+  A URI must be fully qualified — for an uploaded file that is its `uri` field,
+  not its `name`. A bare resource name such as `"files/abc123"` fails with
+  `Unsupported file URI type`.
 
   With the default non-streaming request, returns `{:ok, image}` or
   `{:error, :not_found}` when the completed interaction carries no image. With

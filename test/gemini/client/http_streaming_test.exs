@@ -127,4 +127,40 @@ defmodule Gemini.Client.HTTPStreamingTest do
     assert error_metadata.governed_context.provider_account_ref ==
              "account://google/gemini/test"
   end
+
+  test "a 429 on a streamed GET is NOT transport-retried when max_retries: 0", %{
+    bypass: bypass
+  } do
+    {:ok, counter} = Agent.start_link(fn -> 0 end)
+    on_exit(fn -> if Process.alive?(counter), do: Agent.stop(counter) end)
+
+    Gemini.TestHTTPServer.expect(bypass, "GET", "/stream", fn conn ->
+      Agent.update(counter, &(&1 + 1))
+
+      conn
+      |> Conn.put_resp_header("retry-after", "0")
+      |> Conn.resp(429, Jason.encode!(%{"error" => %{"message" => "rate limited"}}))
+    end)
+
+    callback = fn _event -> :ok end
+
+    {:error, _reason} =
+      HTTPStreaming.stream_sse(
+        "http://localhost:#{bypass.port}/stream",
+        [],
+        nil,
+        callback,
+        method: :get,
+        add_sse_params: false,
+        max_retries: 0,
+        timeout: 1_000,
+        connect_timeout: 1_000
+      )
+
+    # A 429 is one of Req's default `:safe_transient` conditions, and GET is a "safe"
+    # method — so without `retry: false` on the streaming request, Req silently retries
+    # underneath our own `max_retries: 0`, hitting the server multiple times per logical
+    # attempt. Assert we hit the wire exactly once.
+    assert Agent.get(counter, & &1) == 1
+  end
 end

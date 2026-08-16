@@ -305,7 +305,14 @@ defmodule Gemini.Client.HTTPStreaming do
         receive_timeout: config.timeout,
         connect_options: [timeout: config.connect_timeout],
         # Use :self to get messages as they arrive
-        into: :self
+        into: :self,
+        # Callers (stream_with_retries/5 above, and Gemini.RateLimiter-backed consumers)
+        # own all retry/retry-budget state. Req's default :safe_transient policy would
+        # otherwise transparently retry safe (GET) streamed requests on 429/5xx/transport
+        # errors, escaping that admission control, duplicating billed attempts, and
+        # happening invisibly underneath our own `max_retries` (even `max_retries: 0`).
+        # Mirrors Gemini.APIs.Interactions.request_json/6 (177b3a8).
+        retry: false
       ]
       |> maybe_put_json(body)
 

@@ -57,12 +57,17 @@ defmodule Gemini.TestHTTPServer do
           {{:error, {:unexpected, method, path}}, %{state | unexpected: {method, path}}}
 
         %{expected: :once, calls: calls} = expectation when calls > 0 ->
-          routes = put_in(state.routes[route], %{expectation | calls: calls + 1})
-          {{:error, {:too_many, method, path}}, %{state | routes: routes}}
+          # NOTE: `put_in(state.routes[route], val)` returns the whole updated `state`
+          # (the path starts at `state`), not just the `:routes` submap. Assign it
+          # directly — wrapping it again in `%{state | routes: ...}` would nest the
+          # entire state inside its own `:routes` field and corrupt every route lookup
+          # on the very next dispatch.
+          new_state = put_in(state.routes[route], %{expectation | calls: calls + 1})
+          {{:error, {:too_many, method, path}}, new_state}
 
         expectation ->
-          routes = put_in(state.routes[route], %{expectation | calls: expectation.calls + 1})
-          {{:ok, route, expectation.handler}, %{state | routes: routes}}
+          new_state = put_in(state.routes[route], %{expectation | calls: expectation.calls + 1})
+          {{:ok, route, expectation.handler}, new_state}
       end
     end)
   end

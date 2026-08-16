@@ -8,7 +8,8 @@ defmodule Gemini.Types.Interactions.EventsTest do
     InteractionSSEEvent,
     StepDelta,
     StepStart,
-    StepStop
+    StepStop,
+    UnknownEvent
   }
 
   describe "InteractionSSEEvent.from_api/1" do
@@ -69,8 +70,53 @@ defmodule Gemini.Types.Interactions.EventsTest do
                })
     end
 
-    test "returns nil for an unrecognized event_type" do
-      assert InteractionSSEEvent.from_api(%{"event_type" => "nope"}) == nil
+    test "decodes an unrecognized event_type as UnknownEvent, not nil" do
+      assert %UnknownEvent{event_type: "nope"} =
+               InteractionSSEEvent.from_api(%{"event_type" => "nope"})
+    end
+
+    test "dispatches interaction.failed as InteractionEvent with the error retained" do
+      event =
+        InteractionSSEEvent.from_api(%{
+          "event_type" => "interaction.failed",
+          "event_id" => "e9",
+          "interaction" => %{
+            "id" => "i",
+            "status" => "failed",
+            "error" => %{"message" => "boom"}
+          }
+        })
+
+      assert %InteractionEvent{event_type: "interaction.failed", interaction: interaction} =
+               event
+
+      assert interaction.error == %{"message" => "boom"}
+    end
+
+    test "dispatches the in-progress vocabulary as InteractionEvent preserving event_type" do
+      for type <- ["interaction.in_progress", "interaction.queued", "interaction.requires_action"] do
+        assert %InteractionEvent{event_type: ^type} =
+                 InteractionSSEEvent.from_api(%{
+                   "event_type" => type,
+                   "interaction" => %{"id" => "i", "status" => "in_progress"}
+                 })
+      end
+    end
+
+    test "an unrecognized event_type decodes as UnknownEvent retaining the raw map" do
+      raw = %{
+        "event_type" => "interaction.new_thing",
+        "event_id" => "e1",
+        "payload" => %{"x" => 1}
+      }
+
+      assert %UnknownEvent{event_type: "interaction.new_thing", raw: ^raw} =
+               InteractionSSEEvent.from_api(raw)
+    end
+
+    test "a map with no event_type decodes as UnknownEvent, not nil" do
+      raw = %{"something" => "else"}
+      assert %UnknownEvent{event_type: nil, raw: ^raw} = InteractionSSEEvent.from_api(raw)
     end
   end
 

@@ -430,6 +430,37 @@ defmodule Gemini.Types.Interactions.Events.StepStop do
   end
 end
 
+defmodule Gemini.Types.Interactions.Events.UnknownEvent do
+  @moduledoc """
+  An SSE event whose `event_type` this library does not model.
+
+  Retains the original map verbatim so forward-compatible event types surface
+  to callers instead of being silently dropped mid-stream.
+  """
+
+  use TypedStruct
+
+  @derive Jason.Encoder
+  typedstruct do
+    field(:event_type, String.t())
+    field(:raw, map())
+  end
+
+  @doc "Parses an unknown SSE event while retaining its raw API map."
+  @spec from_api(map() | t() | nil) :: t() | nil
+  def from_api(nil), do: nil
+  def from_api(%__MODULE__{} = event), do: event
+
+  def from_api(%{} = data),
+    do: %__MODULE__{event_type: Map.get(data, "event_type"), raw: data}
+
+  @doc "Serializes an unknown SSE event using its preserved raw API map."
+  @spec to_api(t() | map() | nil) :: map() | nil
+  def to_api(nil), do: nil
+  def to_api(%{} = map) when not is_struct(map), do: map
+  def to_api(%__MODULE__{raw: raw}), do: raw
+end
+
 defmodule Gemini.Types.Interactions.Events.InteractionSSEEvent do
   @moduledoc """
   Union type for Interactions SSE events.
@@ -444,7 +475,8 @@ defmodule Gemini.Types.Interactions.Events.InteractionSSEEvent do
     InteractionStatusUpdate,
     StepDelta,
     StepStart,
-    StepStop
+    StepStop,
+    UnknownEvent
   }
 
   @event_type_to_module %{
@@ -455,6 +487,10 @@ defmodule Gemini.Types.Interactions.Events.InteractionSSEEvent do
     "interaction.complete" => InteractionEvent,
     "interaction.completed" => InteractionEvent,
     "interaction.created" => InteractionEvent,
+    "interaction.failed" => InteractionEvent,
+    "interaction.in_progress" => InteractionEvent,
+    "interaction.queued" => InteractionEvent,
+    "interaction.requires_action" => InteractionEvent,
     "interaction.start" => InteractionEvent,
     "interaction.status_update" => InteractionStatusUpdate,
     "step.delta" => StepDelta,
@@ -472,13 +508,17 @@ defmodule Gemini.Types.Interactions.Events.InteractionSSEEvent do
           | StepDelta.t()
           | StepStop.t()
           | ErrorEvent.t()
+          | UnknownEvent.t()
 
   @doc """
   Decodes an Interactions SSE event payload.
 
-  Current `interaction.created` and `interaction.completed` spellings, as
-  well as the legacy `interaction.start` and `interaction.complete` spellings,
-  decode as `InteractionEvent`.
+  Current `interaction.created` and `interaction.completed` spellings, the
+  legacy `interaction.start` and `interaction.complete` spellings, and the
+  `interaction.failed`, `interaction.in_progress`, `interaction.queued`, and
+  `interaction.requires_action` spellings all decode as `InteractionEvent`
+  (with `event_type` preserved). Any other, unrecognized `event_type` decodes
+  as `UnknownEvent` instead of being dropped.
   """
   @spec from_api(map() | t() | nil) :: t() | nil
   def from_api(nil), do: nil
@@ -491,11 +531,12 @@ defmodule Gemini.Types.Interactions.Events.InteractionSSEEvent do
   def from_api(%StepDelta{} = event), do: event
   def from_api(%StepStop{} = event), do: event
   def from_api(%ErrorEvent{} = event), do: event
+  def from_api(%UnknownEvent{} = event), do: event
 
   def from_api(%{} = data) do
     case Map.fetch(@event_type_to_module, Map.get(data, "event_type")) do
       {:ok, module} -> module.from_api(data)
-      :error -> nil
+      :error -> UnknownEvent.from_api(data)
     end
   end
 end

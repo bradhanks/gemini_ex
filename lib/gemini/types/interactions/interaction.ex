@@ -41,6 +41,7 @@ defmodule Gemini.Types.Interactions.Interaction do
     field(:created, DateTime.t(), enforce: false)
     field(:environment, term(), enforce: false)
     field(:environment_id, String.t(), enforce: false)
+    field(:error, map(), enforce: false)
     field(:generation_config, map(), enforce: false)
     field(:input, term(), enforce: false)
     field(:labels, map(), enforce: false)
@@ -80,6 +81,7 @@ defmodule Gemini.Types.Interactions.Interaction do
       created: parse_datetime(Map.get(data, "created")),
       environment: Map.get(data, "environment"),
       environment_id: Map.get(data, "environment_id"),
+      error: Map.get(data, "error"),
       generation_config: Map.get(data, "generation_config"),
       input: Map.get(data, "input"),
       labels: Map.get(data, "labels"),
@@ -118,6 +120,7 @@ defmodule Gemini.Types.Interactions.Interaction do
     |> maybe_put("created", datetime_to_iso8601(interaction.created))
     |> maybe_put("environment", interaction.environment)
     |> maybe_put("environment_id", interaction.environment_id)
+    |> maybe_put("error", interaction.error)
     |> maybe_put("generation_config", interaction.generation_config)
     |> maybe_put("input", interaction.input)
     |> maybe_put("labels", interaction.labels)

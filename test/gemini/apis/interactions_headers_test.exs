@@ -1,6 +1,8 @@
 defmodule Gemini.APIs.InteractionsHeadersTest do
   use ExUnit.Case, async: false
 
+  alias Gemini.APIs.Interactions
+
   setup do
     bypass = Bypass.open()
     prev_url = Application.get_env(:gemini_ex, :base_url)
@@ -23,7 +25,7 @@ defmodule Gemini.APIs.InteractionsHeadersTest do
     end)
 
     assert {:ok, _} =
-             Gemini.APIs.Interactions.create("hi",
+             Interactions.create("hi",
                model: "gemini-3.6-flash",
                headers: [{"api-revision", "2026-05-20"}]
              )
@@ -36,7 +38,7 @@ defmodule Gemini.APIs.InteractionsHeadersTest do
     end)
 
     assert {:ok, _} =
-             Gemini.APIs.Interactions.get("v1_abc",
+             Interactions.get("v1_abc",
                headers: [{"api-revision", "2026-05-20"}]
              )
   end
@@ -50,7 +52,7 @@ defmodule Gemini.APIs.InteractionsHeadersTest do
     end)
 
     assert {:error, %Gemini.Error{}} =
-             Gemini.APIs.Interactions.get("v1_abc", headers: [:not_a_header])
+             Interactions.get("v1_abc", headers: [:not_a_header])
 
     assert :counters.get(hits, 1) == 0
   end

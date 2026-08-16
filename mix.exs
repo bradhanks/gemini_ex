@@ -85,7 +85,8 @@ defmodule Gemini.MixProject do
         {:meck, "~> 1.2.0", only: :test},
         {:supertester, "~> 0.6.0", only: :test},
         {:bandit, "~> 1.12", only: :test},
-        {:plug, "~> 1.18", only: :test}
+        {:plug, "~> 1.18", only: :test},
+        {:bypass, "~> 2.1", only: :test}
       ]
   end
 

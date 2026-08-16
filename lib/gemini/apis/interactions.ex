@@ -379,7 +379,10 @@ defmodule Gemini.APIs.Interactions do
         method: method,
         url: url,
         headers: headers,
-        receive_timeout: timeout
+        receive_timeout: timeout,
+        # Callers (e.g. Gemini.RateLimiter-backed consumers) own all retry/retry-budget
+        # state. Req retries would escape that admission control and duplicate effects.
+        retry: false
       ]
       |> maybe_put_json(body)
 

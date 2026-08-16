@@ -72,6 +72,9 @@ defmodule Gemini.APIs.Interactions do
   - `:labels` — map of string keys to string values
   - `:webhook_config` — map
   - `:user_metadata` — map
+  - `:headers` — extra request headers as `{name, value}` string tuples, appended
+    after auth headers (e.g. `[{"api-revision", "2026-05-20"}]` to pin an API
+    revision). Applies to JSON and streaming requests alike.
   """
   @spec create(Input.t(), keyword()) ::
           result(Interaction.t() | Enumerable.t())
@@ -234,13 +237,36 @@ defmodule Gemini.APIs.Interactions do
   defp validate_get_opts(_stream?, _last_event_id), do: :ok
 
   defp auth_headers_and_credentials(auth, opts) do
-    with {:ok, _auth, headers} <- MultiAuthCoordinator.coordinate_auth(auth, opts),
-         {:ok, credentials} <- MultiAuthCoordinator.get_credentials(auth, opts) do
-      {:ok, headers, credentials}
-    else
-      {:error, reason} -> {:error, Error.auth_error(to_string(reason))}
+    case validate_extra_headers(Keyword.get(opts, :headers, [])) do
+      {:ok, extra_headers} ->
+        with {:ok, _auth, headers} <- MultiAuthCoordinator.coordinate_auth(auth, opts),
+             {:ok, credentials} <- MultiAuthCoordinator.get_credentials(auth, opts) do
+          {:ok, headers ++ extra_headers, credentials}
+        else
+          {:error, reason} -> {:error, Error.auth_error(to_string(reason))}
+        end
+
+      {:error, _} = error ->
+        error
     end
   end
+
+  defp validate_extra_headers(headers) when is_list(headers) do
+    if Enum.all?(headers, fn
+         {name, value} -> is_binary(name) and is_binary(value)
+         _other -> false
+       end) do
+      {:ok, headers}
+    else
+      {:error,
+       Error.validation_error(":headers must be a list of {String.t(), String.t()} tuples")}
+    end
+  end
+
+  defp validate_extra_headers(_headers),
+    do:
+      {:error,
+       Error.validation_error(":headers must be a list of {String.t(), String.t()} tuples")}
 
   defp default_api_version(:gemini), do: "v1beta"
   defp default_api_version(:vertex_ai), do: "v1beta1"

@@ -78,10 +78,12 @@ end
 
 defmodule Gemini.Types.Interactions.Events.InteractionEvent do
   @moduledoc """
-  Interactions SSE event: `interaction.created` or `interaction.completed`.
+  Interactions SSE event carrying a whole `Interaction`.
 
-  The legacy `interaction.start` and `interaction.complete` spellings are also
-  supported.
+  Decoded for `interaction.created`, for every `interaction.<status>` spelling
+  in `Gemini.Types.Interactions.Interaction.statuses/0`, and for the legacy
+  `interaction.start` and `interaction.complete` spellings. The exact spelling
+  received is preserved in `event_type`.
   """
 
   use TypedStruct
@@ -479,24 +481,34 @@ defmodule Gemini.Types.Interactions.Events.InteractionSSEEvent do
     UnknownEvent
   }
 
-  @event_type_to_module %{
-    "content.delta" => ContentDelta,
-    "content.start" => ContentStart,
-    "content.stop" => ContentStop,
-    "error" => ErrorEvent,
-    "interaction.complete" => InteractionEvent,
-    "interaction.completed" => InteractionEvent,
-    "interaction.created" => InteractionEvent,
-    "interaction.failed" => InteractionEvent,
-    "interaction.in_progress" => InteractionEvent,
-    "interaction.queued" => InteractionEvent,
-    "interaction.requires_action" => InteractionEvent,
-    "interaction.start" => InteractionEvent,
-    "interaction.status_update" => InteractionStatusUpdate,
-    "step.delta" => StepDelta,
-    "step.start" => StepStart,
-    "step.stop" => StepStop
-  }
+  alias Gemini.Types.Interactions.Interaction
+
+  # Every status the library models has an `interaction.<status>` SSE spelling,
+  # plus `interaction.created`. Derived from `Interaction.statuses/0` — the same
+  # list `Gemini.APIs.Interactions.terminal_status?/1` is built from — so a new
+  # terminal status can never decode as an `UnknownEvent` here while the poller
+  # already treats it as terminal.
+  @interaction_event_types Enum.map(["created" | Interaction.statuses()], &"interaction.#{&1}")
+
+  # Legacy spellings, retained for wire compatibility.
+  @legacy_interaction_event_types ["interaction.start", "interaction.complete"]
+
+  @event_type_to_module Map.merge(
+                          %{
+                            "content.delta" => ContentDelta,
+                            "content.start" => ContentStart,
+                            "content.stop" => ContentStop,
+                            "error" => ErrorEvent,
+                            "interaction.status_update" => InteractionStatusUpdate,
+                            "step.delta" => StepDelta,
+                            "step.start" => StepStart,
+                            "step.stop" => StepStop
+                          },
+                          Map.new(
+                            @interaction_event_types ++ @legacy_interaction_event_types,
+                            &{&1, InteractionEvent}
+                          )
+                        )
 
   @type t ::
           InteractionEvent.t()
@@ -513,12 +525,13 @@ defmodule Gemini.Types.Interactions.Events.InteractionSSEEvent do
   @doc """
   Decodes an Interactions SSE event payload.
 
-  Current `interaction.created` and `interaction.completed` spellings, the
-  legacy `interaction.start` and `interaction.complete` spellings, and the
-  `interaction.failed`, `interaction.in_progress`, `interaction.queued`, and
-  `interaction.requires_action` spellings all decode as `InteractionEvent`
-  (with `event_type` preserved). Any other, unrecognized `event_type` decodes
-  as `UnknownEvent` instead of being dropped.
+  `interaction.created` plus one `interaction.<status>` spelling for every
+  status in `Gemini.Types.Interactions.Interaction.statuses/0`
+  (`queued`, `in_progress`, `requires_action`, `completed`, `failed`,
+  `cancelled`, `incomplete`, `budget_exceeded`), and the legacy
+  `interaction.start` / `interaction.complete` spellings, all decode as
+  `InteractionEvent` with `event_type` preserved. Any other, unrecognized
+  `event_type` decodes as `UnknownEvent` instead of being dropped.
   """
   @spec from_api(map() | t() | nil) :: t() | nil
   def from_api(nil), do: nil

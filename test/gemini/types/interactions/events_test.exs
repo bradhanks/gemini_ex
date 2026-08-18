@@ -94,7 +94,14 @@ defmodule Gemini.Types.Interactions.EventsTest do
     end
 
     test "dispatches the in-progress vocabulary as InteractionEvent preserving event_type" do
-      for type <- ["interaction.in_progress", "interaction.queued", "interaction.requires_action"] do
+      for type <- [
+            "interaction.in_progress",
+            "interaction.queued",
+            "interaction.requires_action",
+            "interaction.cancelled",
+            "interaction.incomplete",
+            "interaction.budget_exceeded"
+          ] do
         assert %InteractionEvent{event_type: ^type} =
                  InteractionSSEEvent.from_api(%{
                    "event_type" => type,

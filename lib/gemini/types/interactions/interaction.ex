@@ -31,6 +31,9 @@ defmodule Gemini.Types.Interactions.Interaction do
 
   @type status :: String.t()
 
+  @terminal_statuses ~w(requires_action completed failed cancelled incomplete budget_exceeded)
+  @statuses ~w(queued in_progress) ++ @terminal_statuses
+
   @derive Jason.Encoder
   typedstruct enforce: true do
     field(:id, String.t())
@@ -64,6 +67,27 @@ defmodule Gemini.Types.Interactions.Interaction do
     field(:user_metadata, map(), enforce: false)
     field(:webhook_config, map(), enforce: false)
   end
+
+  @doc """
+  The documented `status` values, in lifecycle order.
+
+  The `status` field itself stays a plain string, so a status the server adds
+  later still parses; this list is the vocabulary the library models today and
+  is the single source for `terminal_statuses/0`, for
+  `Gemini.APIs.Interactions.wait_for_completion/2`'s stop condition, and for the
+  `interaction.<status>` SSE event spellings in
+  `Gemini.Types.Interactions.Events.InteractionSSEEvent`.
+  """
+  @spec statuses() :: [status()]
+  def statuses, do: @statuses
+
+  @doc """
+  The statuses at which an interaction stops advancing.
+
+  A poller may stop, and a stream consumer may treat the turn as finished.
+  """
+  @spec terminal_statuses() :: [status()]
+  def terminal_statuses, do: @terminal_statuses
 
   @spec from_api(map() | nil) :: t() | nil
   def from_api(nil), do: nil

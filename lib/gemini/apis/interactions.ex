@@ -576,13 +576,10 @@ defmodule Gemini.APIs.Interactions do
     end
   end
 
-  defp terminal_status?("completed"), do: true
-  defp terminal_status?("failed"), do: true
-  defp terminal_status?("cancelled"), do: true
-  defp terminal_status?("requires_action"), do: true
-  defp terminal_status?("incomplete"), do: true
-  defp terminal_status?("budget_exceeded"), do: true
-  defp terminal_status?(_), do: false
+  # Derived from `Interaction.terminal_statuses/0`, which the SSE dispatch table
+  # in `Gemini.Types.Interactions.Events.InteractionSSEEvent` also builds from,
+  # so the poller and the stream decoder cannot disagree about what is terminal.
+  defp terminal_status?(status), do: status in Interaction.terminal_statuses()
 
   defp validate_model_or_agent(%{model: nil, agent: nil}) do
     {:error, Error.validation_error("Interactions.create requires either :model or :agent")}

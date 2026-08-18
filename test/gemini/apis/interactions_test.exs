@@ -59,6 +59,34 @@ defmodule Gemini.APIs.InteractionsTest do
       assert String.ends_with?(url, "/v1beta/interactions")
     end
 
+    test "a non-binary :base_url is a config error, not a raise" do
+      saved = Application.fetch_env(:gemini_ex, :base_url)
+
+      on_exit(fn ->
+        case saved do
+          {:ok, value} -> Application.put_env(:gemini_ex, :base_url, value)
+          :error -> Application.delete_env(:gemini_ex, :base_url)
+        end
+      end)
+
+      for malformed <- [nil, :not_a_url, 42] do
+        Application.put_env(:gemini_ex, :base_url, malformed)
+
+        assert {:error, %Error{type: :config_error}} =
+                 Interactions.build_create_url(:gemini, %{api_key: "test"}, "v1beta")
+
+        assert {:error, %Error{type: :config_error}} =
+                 Interactions.build_get_url(
+                   :gemini,
+                   %{api_key: "test"},
+                   "v1beta",
+                   "int_123",
+                   false,
+                   nil
+                 )
+      end
+    end
+
     test "Vertex create matches aiplatform scoped path" do
       credentials = %{project_id: "proj", location: "us-central1"}
 

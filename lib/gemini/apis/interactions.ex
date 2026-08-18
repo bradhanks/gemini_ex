@@ -278,6 +278,9 @@ defmodule Gemini.APIs.Interactions do
 
       {:error, reason} ->
         {:error, Error.config_error("Invalid base URL: #{inspect(reason)}")}
+
+      other ->
+        {:error, Error.config_error("Invalid base URL: #{inspect(other)}")}
     end
   end
 

@@ -5,14 +5,22 @@ defmodule Gemini.APIs.InteractionsHeadersTest do
 
   setup do
     bypass = Bypass.open()
-    prev_url = Application.get_env(:gemini_ex, :base_url)
-    prev_key = Application.get_env(:gemini_ex, :api_key)
+
+    # `Application.get_env/2` cannot distinguish "unset" from "set to nil", and
+    # `:base_url` is genuinely unset in a clean test env. Restoring a literal
+    # `nil` would defeat `get_env(:gemini_ex, :base_url, @base_url)`'s default in
+    # `Gemini.Auth.GeminiStrategy.base_url/1` for every later test in the same
+    # BEAM. Save with `fetch_env/2` and restore absence with `delete_env/2`.
+    saved = for key <- [:base_url, :api_key], do: {key, Application.fetch_env(:gemini_ex, key)}
+
     Application.put_env(:gemini_ex, :base_url, "http://localhost:#{bypass.port}")
     Application.put_env(:gemini_ex, :api_key, "test-key")
 
     on_exit(fn ->
-      Application.put_env(:gemini_ex, :base_url, prev_url)
-      Application.put_env(:gemini_ex, :api_key, prev_key)
+      Enum.each(saved, fn
+        {key, {:ok, value}} -> Application.put_env(:gemini_ex, key, value)
+        {key, :error} -> Application.delete_env(:gemini_ex, key)
+      end)
     end)
 
     {:ok, bypass: bypass}

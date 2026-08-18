@@ -3,14 +3,19 @@ defmodule Gemini.APIs.InteractionsRetryTest do
 
   setup do
     bypass = Bypass.open()
-    prev_url = Application.get_env(:gemini_ex, :base_url)
-    prev_key = Application.get_env(:gemini_ex, :api_key)
+
+    # See the note in interactions_headers_test.exs: restore *absence*, not
+    # `nil`, or every later `:base_url` read in this BEAM returns `nil`.
+    saved = for key <- [:base_url, :api_key], do: {key, Application.fetch_env(:gemini_ex, key)}
+
     Application.put_env(:gemini_ex, :base_url, "http://localhost:#{bypass.port}")
     Application.put_env(:gemini_ex, :api_key, "test-key")
 
     on_exit(fn ->
-      Application.put_env(:gemini_ex, :base_url, prev_url)
-      Application.put_env(:gemini_ex, :api_key, prev_key)
+      Enum.each(saved, fn
+        {key, {:ok, value}} -> Application.put_env(:gemini_ex, key, value)
+        {key, :error} -> Application.delete_env(:gemini_ex, key)
+      end)
     end)
 
     {:ok, bypass: bypass}

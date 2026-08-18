@@ -2,9 +2,11 @@ defmodule Gemini.APIs.InteractionsHeadersTest do
   use ExUnit.Case, async: false
 
   alias Gemini.APIs.Interactions
+  alias Gemini.TestHTTPServer
+  alias Plug.Conn
 
   setup do
-    bypass = Bypass.open()
+    server = TestHTTPServer.open()
 
     # `Application.get_env/2` cannot distinguish "unset" from "set to nil", and
     # `:base_url` is genuinely unset in a clean test env. Restoring a literal
@@ -13,7 +15,7 @@ defmodule Gemini.APIs.InteractionsHeadersTest do
     # BEAM. Save with `fetch_env/2` and restore absence with `delete_env/2`.
     saved = for key <- [:base_url, :api_key], do: {key, Application.fetch_env(:gemini_ex, key)}
 
-    Application.put_env(:gemini_ex, :base_url, "http://localhost:#{bypass.port}")
+    Application.put_env(:gemini_ex, :base_url, "http://localhost:#{server.port}")
     Application.put_env(:gemini_ex, :api_key, "test-key")
 
     on_exit(fn ->
@@ -23,13 +25,13 @@ defmodule Gemini.APIs.InteractionsHeadersTest do
       end)
     end)
 
-    {:ok, bypass: bypass}
+    {:ok, server: server}
   end
 
-  test "create forwards caller :headers to the wire", %{bypass: bypass} do
-    Bypass.expect_once(bypass, "POST", "/v1beta/interactions", fn conn ->
-      assert Plug.Conn.get_req_header(conn, "api-revision") == ["2026-05-20"]
-      Plug.Conn.resp(conn, 200, ~s({"id": "v1_abc", "status": "completed"}))
+  test "create forwards caller :headers to the wire", %{server: server} do
+    TestHTTPServer.expect_once(server, "POST", "/v1beta/interactions", fn conn ->
+      assert Conn.get_req_header(conn, "api-revision") == ["2026-05-20"]
+      Conn.resp(conn, 200, ~s({"id": "v1_abc", "status": "completed"}))
     end)
 
     assert {:ok, _} =
@@ -39,10 +41,10 @@ defmodule Gemini.APIs.InteractionsHeadersTest do
              )
   end
 
-  test "get forwards caller :headers to the wire", %{bypass: bypass} do
-    Bypass.expect_once(bypass, "GET", "/v1beta/interactions/v1_abc", fn conn ->
-      assert Plug.Conn.get_req_header(conn, "api-revision") == ["2026-05-20"]
-      Plug.Conn.resp(conn, 200, ~s({"id": "v1_abc", "status": "completed"}))
+  test "get forwards caller :headers to the wire", %{server: server} do
+    TestHTTPServer.expect_once(server, "GET", "/v1beta/interactions/v1_abc", fn conn ->
+      assert Conn.get_req_header(conn, "api-revision") == ["2026-05-20"]
+      Conn.resp(conn, 200, ~s({"id": "v1_abc", "status": "completed"}))
     end)
 
     assert {:ok, _} =
@@ -51,12 +53,24 @@ defmodule Gemini.APIs.InteractionsHeadersTest do
              )
   end
 
-  test "invalid :headers is an error and makes no HTTP call", %{bypass: bypass} do
+  test "cancel forwards caller :headers to the wire", %{server: server} do
+    TestHTTPServer.expect_once(server, "POST", "/v1beta/interactions/v1_abc/cancel", fn conn ->
+      assert Conn.get_req_header(conn, "api-revision") == ["2026-05-20"]
+      Conn.resp(conn, 200, ~s({"id": "v1_abc", "status": "cancelled"}))
+    end)
+
+    assert {:ok, _} =
+             Interactions.cancel("v1_abc",
+               headers: [{"api-revision", "2026-05-20"}]
+             )
+  end
+
+  test "invalid :headers is an error and makes no HTTP call", %{server: server} do
     hits = :counters.new(1, [:atomics])
 
-    Bypass.stub(bypass, "GET", "/v1beta/interactions/v1_abc", fn conn ->
+    TestHTTPServer.stub(server, "GET", "/v1beta/interactions/v1_abc", fn conn ->
       :counters.add(hits, 1, 1)
-      Plug.Conn.resp(conn, 200, "{}")
+      Conn.resp(conn, 200, "{}")
     end)
 
     assert {:error, %Gemini.Error{}} =

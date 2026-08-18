@@ -47,6 +47,16 @@ defmodule Gemini.TestHTTPServer do
     register(server, method, path, :once, handler)
   end
 
+  @doc """
+  Registers a handler that is allowed to be called any number of times,
+  including zero. Use it when the point of the test is that the route is
+  *not* reached.
+  """
+  @spec stub(t(), String.t(), String.t(), handler()) :: :ok
+  def stub(server, method, path, handler) do
+    register(server, method, path, :any_count, handler)
+  end
+
   @doc false
   def dispatch(expectations, method, path) do
     Agent.get_and_update(expectations, fn state ->

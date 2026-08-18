@@ -179,5 +179,26 @@ defmodule Gemini.Types.Interactions.InteractionTest do
 
       assert encoded["steps"] == steps_response()["steps"]
     end
+
+    test "round-trips error verbatim" do
+      raw = %{
+        "id" => "i",
+        "status" => "failed",
+        "error" => %{"code" => "safety_blocked", "message" => "boom", "details" => %{"x" => 1}}
+      }
+
+      interaction = Interaction.from_api(raw)
+
+      # `error` is a passthrough map, not decoded into a struct, so the whole
+      # server payload survives a decode/encode round-trip unflattened.
+      assert interaction.error == raw["error"]
+      assert Interaction.to_api(interaction)["error"] == raw["error"]
+    end
+
+    test "omits error when the interaction has none" do
+      interaction = Interaction.from_api(%{"id" => "i", "status" => "completed"})
+
+      refute Map.has_key?(Interaction.to_api(interaction), "error")
+    end
   end
 end

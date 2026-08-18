@@ -144,18 +144,18 @@ defmodule Gemini.Client.HTTPStreamingTest do
 
     callback = fn _event -> :ok end
 
-    {:error, _reason} =
-      HTTPStreaming.stream_sse(
-        "http://localhost:#{bypass.port}/stream",
-        [],
-        nil,
-        callback,
-        method: :get,
-        add_sse_params: false,
-        max_retries: 0,
-        timeout: 1_000,
-        connect_timeout: 1_000
-      )
+    assert {:error, %Gemini.Error{type: :http_error, http_status: 429}} =
+             HTTPStreaming.stream_sse(
+               "http://localhost:#{bypass.port}/stream",
+               [],
+               nil,
+               callback,
+               method: :get,
+               add_sse_params: false,
+               max_retries: 0,
+               timeout: 1_000,
+               connect_timeout: 1_000
+             )
 
     # A 429 is one of Req's default `:safe_transient` conditions, and GET is a "safe"
     # method — so without `retry: false` on the streaming request, Req silently retries

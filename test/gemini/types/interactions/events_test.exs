@@ -125,6 +125,36 @@ defmodule Gemini.Types.Interactions.EventsTest do
       raw = %{"something" => "else"}
       assert %UnknownEvent{event_type: nil, raw: ^raw} = InteractionSSEEvent.from_api(raw)
     end
+
+    test "nil stays nil" do
+      assert InteractionSSEEvent.from_api(nil) == nil
+    end
+
+    test "an already-decoded UnknownEvent passes through untouched" do
+      event = UnknownEvent.from_api(%{"event_type" => "interaction.new_thing"})
+
+      assert InteractionSSEEvent.from_api(event) == event
+    end
+  end
+
+  describe "UnknownEvent conversions" do
+    test "supports nil, passthrough, and map conversion heads" do
+      raw = %{"event_type" => "interaction.new_thing", "payload" => %{"x" => 1}}
+      event = UnknownEvent.from_api(raw)
+
+      assert UnknownEvent.from_api(nil) == nil
+      assert UnknownEvent.from_api(event) == event
+      assert UnknownEvent.to_api(nil) == nil
+      assert UnknownEvent.to_api(raw) == raw
+      assert UnknownEvent.to_api(event) == raw
+    end
+
+    test "a hand-built UnknownEvent with no raw map serializes to nil" do
+      # `to_api/1` replays the preserved raw map and nothing else, so an event
+      # the caller constructed rather than decoded has nothing to serialize.
+      # Deliberate: the struct is a decoding shim, not an authoring surface.
+      assert UnknownEvent.to_api(%UnknownEvent{event_type: "interaction.new_thing"}) == nil
+    end
   end
 
   describe "to_api/1" do

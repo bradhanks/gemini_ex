@@ -37,6 +37,8 @@ defmodule Gemini.APIs.Interactions do
   @default_poll_interval_ms 2_000
   @default_wait_timeout_ms 300_000
 
+  @invalid_headers_message ":headers must be a list of {String.t(), String.t()} tuples"
+
   @doc """
   Create a new interaction.
 
@@ -237,17 +239,15 @@ defmodule Gemini.APIs.Interactions do
   defp validate_get_opts(_stream?, _last_event_id), do: :ok
 
   defp auth_headers_and_credentials(auth, opts) do
-    case validate_extra_headers(Keyword.get(opts, :headers, [])) do
-      {:ok, extra_headers} ->
-        with {:ok, _auth, headers} <- MultiAuthCoordinator.coordinate_auth(auth, opts),
-             {:ok, credentials} <- MultiAuthCoordinator.get_credentials(auth, opts) do
-          {:ok, headers ++ extra_headers, credentials}
-        else
-          {:error, reason} -> {:error, Error.auth_error(to_string(reason))}
-        end
-
-      {:error, _} = error ->
-        error
+    with {:ok, extra_headers} <- validate_extra_headers(Keyword.get(opts, :headers, [])),
+         {:ok, _auth, headers} <- MultiAuthCoordinator.coordinate_auth(auth, opts),
+         {:ok, credentials} <- MultiAuthCoordinator.get_credentials(auth, opts) do
+      {:ok, headers ++ extra_headers, credentials}
+    else
+      # An already-shaped error (the :headers validation, or a coordinator that
+      # returns one) is returned as-is; only a bare reason becomes an auth error.
+      {:error, %Error{}} = error -> error
+      {:error, reason} -> {:error, Error.auth_error(to_string(reason))}
     end
   end
 
@@ -258,15 +258,12 @@ defmodule Gemini.APIs.Interactions do
        end) do
       {:ok, headers}
     else
-      {:error,
-       Error.validation_error(":headers must be a list of {String.t(), String.t()} tuples")}
+      {:error, Error.validation_error(@invalid_headers_message)}
     end
   end
 
   defp validate_extra_headers(_headers),
-    do:
-      {:error,
-       Error.validation_error(":headers must be a list of {String.t(), String.t()} tuples")}
+    do: {:error, Error.validation_error(@invalid_headers_message)}
 
   defp default_api_version(:gemini), do: "v1beta"
   defp default_api_version(:vertex_ai), do: "v1beta1"

@@ -268,13 +268,16 @@ defmodule Gemini.APIs.Interactions do
   defp default_api_version(:gemini), do: "v1beta"
   defp default_api_version(:vertex_ai), do: "v1beta1"
 
+  # Anything that is not a binary is a config error, not a raise. That covers the
+  # `{:error, reason}` an auth strategy may return *and* the values its spec does
+  # not admit but `Application.get_env/3` can still hand back — notably an
+  # explicit `nil` under `:base_url`, which `Gemini.Auth.GeminiStrategy.base_url/1`
+  # returns unvalidated. A single catch-all keeps every path inside this module's
+  # `{:ok, _} | {:error, %Error{}}` contract.
   defp base_url_root(auth, credentials) do
     case Auth.get_base_url(auth, credentials) do
       base_url when is_binary(base_url) ->
         {:ok, strip_api_version_segment(base_url)}
-
-      {:error, reason} ->
-        {:error, Error.config_error("Invalid base URL: #{inspect(reason)}")}
 
       other ->
         {:error, Error.config_error("Invalid base URL: #{inspect(other)}")}

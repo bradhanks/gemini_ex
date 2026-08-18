@@ -26,7 +26,32 @@ reachable only when `auth_config/0` matches neither the `:gemini` nor the
 resolution for Interactions goes through `Gemini.Auth.GeminiStrategy.base_url/1`,
 which reads `:gemini_ex` correctly.
 
-## 2. `HTTPStreaming.stream_with_retries/6` retries non-retryable 4xx
+## 2. `GeminiStrategy.base_url/1` returns unvalidated config under a `String.t()` spec
+
+`lib/gemini/auth/gemini_strategy.ex:36`
+
+```elixir
+@impl true
+def base_url(_credentials) do
+  Application.get_env(:gemini_ex, :base_url, @base_url)
+end
+```
+
+The `Gemini.Auth` behaviour specs the callback as `String.t() | {:error, term()}`,
+but `Application.get_env/3` returns whatever the operator configured, and its
+default only applies when the key is *absent* — an explicitly-stored `nil` comes
+straight back. So the function can return a value its own spec forbids, and
+dialyzer (correctly trusting the spec) cannot see it. Any caller that pattern
+matches on `String.t() | {:error, _}` raises instead.
+
+`Gemini.APIs.Interactions` defends itself at the boundary — `base_url_root/2`
+turns a non-binary into a `%Gemini.Error{type: :config_error}` — but the source
+should validate: return `{:error, ...}` when the configured value is not a
+binary, so the contract the spec advertises is the contract callers get. Fixing
+it in the strategy is an upstream call because every auth strategy shares the
+behaviour.
+
+## 3. `HTTPStreaming.stream_with_retries/6` retries non-retryable 4xx
 
 `lib/gemini/client/http_streaming.ex:228-262`
 
@@ -41,7 +66,7 @@ attempt is billed. Since `Interactions.stream_request/5` only forwards
 Suggested fix: classify on `%Gemini.Error{http_status: status}` and honour
 `retry-after`.
 
-## 3. `retry: false` is hand-copied at 3 of ~20 Req call sites
+## 4. `retry: false` is hand-copied at 3 of ~20 Req call sites
 
 `grep -rn "retry:" lib/` finds it only in `apis/interactions.ex:411`,
 `client/http_streaming.ex:315`, and `client/http.ex:148`. Still on Req's default
@@ -54,7 +79,7 @@ There is no shared option builder, so the invariant is three comments that have
 to be remembered a fourth time. A `Gemini.Client.ReqOptions.base/1` — or even a
 single module attribute with one canonical comment — would make it structural.
 
-## 4. `interaction.failed` error placement is asserted against a hand-written fixture
+## 5. `interaction.failed` error placement is asserted against a hand-written fixture
 
 `lib/gemini/types/interactions/interaction.ex:47` ·
 `lib/gemini/types/interactions/events.ex` (`InteractionEvent.from_api/1`)

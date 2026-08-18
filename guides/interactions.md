@@ -65,6 +65,59 @@ for event <- stream do
 end
 ```
 
+### Which events a stream yields
+
+Every SSE frame decodes to one of these structs under
+`Gemini.Types.Interactions.Events`:
+
+| Event type | Struct |
+| --- | --- |
+| `content.start` / `content.delta` / `content.stop` | `ContentStart` / `ContentDelta` / `ContentStop` |
+| `step.start` / `step.delta` / `step.stop` | `StepStart` / `StepDelta` / `StepStop` |
+| `interaction.status_update` | `InteractionStatusUpdate` |
+| `interaction.created`, plus `interaction.<status>` for every status in `Gemini.Types.Interactions.Interaction.statuses/0` (`queued`, `in_progress`, `requires_action`, `completed`, `failed`, `cancelled`, `incomplete`, `budget_exceeded`), plus the legacy `interaction.start` / `interaction.complete` | `InteractionEvent` (the exact spelling is preserved in `event_type`) |
+| `error` | `ErrorEvent` |
+| anything else | `UnknownEvent` |
+
+`UnknownEvent` retains the original map verbatim in its `raw` field, so an
+event type this library does not model yet reaches you instead of being dropped
+mid-stream. Match it — or keep a catch-all clause — rather than assuming the
+list of known structs is exhaustive.
+
+Terminal state is easiest to watch through `InteractionEvent`, since a
+cancellation and a budget exceedance arrive the same way a completion does:
+
+```elixir
+alias Gemini.Types.Interactions.Events.InteractionEvent
+alias Gemini.Types.Interactions.Interaction
+
+terminal = Interaction.terminal_statuses()
+
+Enum.find(stream, fn
+  %InteractionEvent{interaction: %Interaction{status: status}} -> status in terminal
+  _other -> false
+end)
+```
+
+## Custom request headers
+
+`create/2`, `get/2`, `cancel/2`, and `delete/2` all accept `:headers` — extra
+request headers as `{name, value}` string tuples, appended after the auth
+headers. They apply to JSON and streaming requests alike.
+
+```elixir
+{:ok, interaction} =
+  Interactions.create("What is the capital of France?",
+    model: "gemini-2.5-flash",
+    headers: [{"api-revision", "2026-05-20"}]
+  )
+```
+
+A value that is not a list of string/string tuples returns
+`{:error, %Gemini.Error{type: :validation_error}}` before any request is made.
+Names are not deduplicated against the auth headers, so do not use `:headers`
+to override `Authorization` or `x-goog-api-key` — configure auth instead.
+
 ## Resumption (`last_event_id`)
 
 If your stream is interrupted, persist the `interaction_id` and the last `event_id` you processed, then resume with `get(stream: true, last_event_id: ...)`.

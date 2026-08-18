@@ -55,7 +55,11 @@ Gemini.Interactions.Text.generate("Write a compact release announcement",
   `Gemini.Types.Interactions.ResponseFormat`, raw maps, or a list of formats.
 - `stream: true` returns the SSE stream unchanged. Consume its
   `Gemini.Types.Interactions.Events.InteractionSSEEvent` values instead of
-  calling synchronous interaction accessors on the stream.
+  calling synchronous interaction accessors on the stream. An event type this
+  library does not model arrives as a
+  `Gemini.Types.Interactions.Events.UnknownEvent` holding the raw map, so match
+  the variants you care about and keep a catch-all clause — see
+  [Which events a stream yields](interactions.md#which-events-a-stream-yields).
 
 For interaction CRUD, background execution, and stream resumption, see the
 [Interactions API guide](interactions.md).

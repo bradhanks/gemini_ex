@@ -7,8 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added a `:headers` option to `Gemini.APIs.Interactions.create/2`, `get/2`,
+  `cancel/2`, and `delete/2`. Extra request headers are given as
+  `{name, value}` string tuples and are appended after the auth headers — for
+  example `headers: [{"api-revision", "2026-05-20"}]` to pin an API revision.
+  The option applies to JSON and streaming requests alike, and an ill-formed
+  value returns `{:error, %Gemini.Error{type: :validation_error}}` before any
+  request is made.
+- Added `Gemini.Types.Interactions.Events.UnknownEvent`, a lossless fallback for
+  unmodeled SSE event types — the event-stream twin of the unmodeled-step
+  fallback added in 0.17.0. An `event_type` this library does not model now
+  surfaces as `%UnknownEvent{event_type: ..., raw: ...}` carrying the original
+  map verbatim, instead of being dropped mid-stream. **Behavior change for
+  existing consumers:** code that pattern-matches exhaustively on the nine
+  previously-known event structs now needs a catch-all clause.
+- Added SSE decoding for the full interaction event vocabulary. Alongside
+  `interaction.created` and the legacy `interaction.start` /
+  `interaction.complete` spellings, `interaction.<status>` decodes as
+  `InteractionEvent` (with `event_type` preserved) for every status in the new
+  `Gemini.Types.Interactions.Interaction.statuses/0`: `queued`, `in_progress`,
+  `requires_action`, `completed`, `failed`, `cancelled`, `incomplete`, and
+  `budget_exceeded`. Previously `cancelled`, `incomplete`, and
+  `budget_exceeded` degraded to unmodeled events while their siblings decoded,
+  so a consumer watching a stream for terminal state saw a failure but missed a
+  cancellation or a budget exceedance.
+- Added `Gemini.Types.Interactions.Interaction.statuses/0` and
+  `terminal_statuses/0`, the single status vocabulary shared by the SSE event
+  dispatch and by `Gemini.APIs.Interactions.wait_for_completion/2`'s stop
+  condition.
+- Added `Gemini.Types.Interactions.Interaction.error`, the server's error
+  payload on a failed interaction, carried verbatim as a map by both
+  `from_api/1` and `to_api/1`.
+
 ### Fixed
 
+- Fixed streamed Interactions and streamed SSE requests being retried by Req's
+  own transport-level `:safe_transient` policy underneath the library's
+  `:max_retries`. A 429 or 5xx on a streamed GET hit the wire several times per
+  logical attempt — each attempt billable — even with `max_retries: 0`. The
+  streaming request now sets `retry: false`, leaving
+  `Gemini.Client.HTTPStreaming`'s own retry loop as the single authority.
+- Fixed `Gemini.APIs.Interactions.create/2`, `get/2`, `cancel/2`, and
+  `delete/2` raising `CaseClauseError` when `:base_url` is configured to a
+  non-binary value. They now return `{:error, %Gemini.Error{type:
+  :config_error}}` like every other error path in the module.
 - Fixed model turns losing their function call during request serialization.
   `%Gemini.Types.Part{function_call: ...}` — the shape `Part.from_api/1` returns,
   so the shape callers replay in a manual tool loop — serialized to an empty
